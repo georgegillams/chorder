@@ -11,8 +11,16 @@ import AppKit
 import SwiftUI
 
 
+        enum InputType {
+        case chord
+            case character
+            case space
+            case unknown
+    }
+    
 @main
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
+
     
     /* Application */
     let appModel = AppModel()
@@ -28,11 +36,12 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
     var lastKeydown: Int64 = 0
-    var needsSpaceNext = false
+    var lastInputType: InputType = .unknown
     
     /* Constants */
     let backspaceKeyCode = CGKeyCode(51)
-    let leftKey = CGKeyCode(123)
+    let leftKeyCode = CGKeyCode(123)
+    let rightKeyCode = CGKeyCode(124)
     
     func keyDownHandler (event: NSEvent) {
         // if the key presses are being sent by this app, we'll ignore them
@@ -48,15 +57,25 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         //  Ignore space and backspace and clear inputCharacters
         if (eventKey == 49 || eventKey == 51) {
             inputCharacters.removeAllObjects()
-            needsSpaceNext = false
+            lastInputType = .unknown
             return
         }
         
         inputCharacters.add(character)
         lastKeydown = Int64(Date.now.timeIntervalSince1970 * 1000)
         
-        var inputKeysString = inputCharacters.componentsJoined(by: "")
         
+        var inputKeysString = inputCharacters.componentsJoined(by: "")
+
+//          if(                                                                                  ) {
+ //            needsSpaceNext =  false
+//            ignorekeyPresses = 3
+//            pressKey(keyCode: leftKeyCode)
+//            typeText(text: " " )
+//            pressKey(keyCode: rightKeyCode)
+//          }
+ 
+            
         print("inputKeysString \(inputKeysString)")
         
         print("appModel.appSettings.millisecondsToHold \(appModel.millisecondsToHold)")
@@ -64,8 +83,22 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             var inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
             print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
             
+            if(inputKeysStringAfterDelay.count < 2) {
+                // TODO: if(self.lastInputType == .chord && inputKeysString IS NOT PUNCTUATION) {
+                if(self.lastInputType == .chord) {
+                    self.ignorekeyPresses = 3
+                    self.pressKey(keyCode: self.leftKeyCode)
+                    self.typeText(text: " " )
+                    self.pressKey(keyCode: self.rightKeyCode)
+                }
+                self.lastInputType = .character
+            }
+            
+            if( inputKeysString == " ") {
+                self.lastInputType = .space
+            }
+            
             if(inputKeysString == inputKeysStringAfterDelay) {
-                
                 let chord = self.appModel.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
                 if(chord == nil) {
                     return
@@ -74,8 +107,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                 
                 let outputKeysString = chord!.output
                 
-                self.replaceCharacters(chord: chord!, includeSpace: self.needsSpaceNext)
-                self.needsSpaceNext = chord!.pipeNegativePosition == 0
+                self.replaceCharacters(chord: chord!, includeSpace: self.lastInputType == .chord || self.lastInputType == .character)
+                self.lastInputType = .chord
             }
         }
     }
@@ -119,7 +152,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         // Press left to get cursor to correct position
         for _ in 0..<chord.pipeNegativePosition {
-            pressKey(keyCode: leftKey)
+            pressKey(keyCode: leftKeyCode)
         }
     }
     
