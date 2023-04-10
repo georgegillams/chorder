@@ -11,22 +11,22 @@ import SwiftUI
 struct AboutView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
     var versionNsObject: AnyObject? = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as AnyObject
-
+    
     var body: some View {
         let version = versionNsObject as! String
         VStack {
             VStack(alignment: .center) {
-//                Image("eyedropper-3d")
-//                    .resizable()
-//                    .scaledToFit()
-//                    .frame(width: 64, height: 64)
-
+                //                Image("eyedropper-3d")
+                //                    .resizable()
+                //                    .scaledToFit()
+                //                    .frame(width: 64, height: 64)
+                
                 Text("Speedy Contrast Checker \(version)")
                     .bold()
                     .font(.title)
                     .padding(.vertical, 5.0)
-                    
-
+                
+                
                 Text("Created by George Gillams")
                     .underline()
                     .onTapGesture {
@@ -34,19 +34,19 @@ struct AboutView: View {
                             NSWorkspace.shared.open(url)
                         }
                     }
-                    
+                
             }
             .padding(.vertical, 10.0)
             
-                Button(action: {
-//                    delegate.showWelcomeTutorial()
-                }) {
-                    Text("View welcome tutorial")
-                }
+            Button(action: {
+                //                    delegate.showWelcomeTutorial()
+            }) {
+                Text("View welcome tutorial")
+            }
             
             HStack {
                 Text("Bug or Feature?")
-
+                
                 Button(action: {
                     if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
                         NSWorkspace.shared.open(url)

@@ -12,7 +12,6 @@ class AppSettings {
     
     @Published var millisecondsToHold: String
 
-    
     init() {
         // TODO: Read from file
         chords = [
