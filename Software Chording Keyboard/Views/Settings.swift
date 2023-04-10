@@ -14,7 +14,7 @@ struct SettingsView: View {
     @State private var creatingChord = false
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
-
+    
     
     init(appModel: AppModel) {
         self.appModel = appModel
@@ -73,21 +73,21 @@ struct SettingsView: View {
                     Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary)
                     HStack {
                         Spacer()
-                    Button(action: {
-                        creatingChord = false
-                        newChordInput = ""
-                        newChordOutput = ""
-                    }) {
-                        Text("Cancel").font(.title2)
-                    }
-                    Button(action: {
-                        creatingChord = false
-                        appModel.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
-                        newChordInput = ""
-                        newChordOutput = ""
-                    }) {
-                        Text("Save").font(.title2)
-                    }
+                        Button(action: {
+                            creatingChord = false
+                            newChordInput = ""
+                            newChordOutput = ""
+                        }) {
+                            Text("Cancel").font(.title2)
+                        }
+                        Button(action: {
+                            creatingChord = false
+                            appModel.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
+                            newChordInput = ""
+                            newChordOutput = ""
+                        }) {
+                            Text("Save").font(.title2)
+                        }
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }

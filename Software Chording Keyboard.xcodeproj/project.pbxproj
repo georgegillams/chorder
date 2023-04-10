@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		081B0B0929E431550052A0BD /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081B0B0829E431550052A0BD /* Constants.swift */; };
 		08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19EF129DE19F80081AB4E /* AppDelegate.swift */; };
 		08E19EF429DE19F80081AB4E /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19EF329DE19F80081AB4E /* ViewController.swift */; };
 		08E19EF629DE19F90081AB4E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 08E19EF529DE19F90081AB4E /* Assets.xcassets */; };
@@ -39,6 +40,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		081B0B0829E431550052A0BD /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		08E19EEE29DE19F80081AB4E /* Software Chording Keyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Software Chording Keyboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		08E19EF129DE19F80081AB4E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		08E19EF329DE19F80081AB4E /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -82,6 +84,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		081B0B0729E4314C0052A0BD /* Constants */ = {
+			isa = PBXGroup;
+			children = (
+				081B0B0829E431550052A0BD /* Constants.swift */,
+			);
+			path = Constants;
+			sourceTree = "<group>";
+		};
 		08E19EE529DE19F80081AB4E = {
 			isa = PBXGroup;
 			children = (
@@ -105,6 +115,7 @@
 		08E19EF029DE19F80081AB4E /* Software Chording Keyboard */ = {
 			isa = PBXGroup;
 			children = (
+				081B0B0729E4314C0052A0BD /* Constants */,
 				08E19F2229DE1C910081AB4E /* Views */,
 				08E19F1D29DE1A760081AB4E /* Models */,
 				08E19F1C29DE1A3C0081AB4E /* Trunk */,
@@ -297,6 +308,7 @@
 				08E19F2129DE1A950081AB4E /* Chord.swift in Sources */,
 				08E19F1F29DE1A820081AB4E /* AppSettings.swift in Sources */,
 				08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */,
+				081B0B0929E431550052A0BD /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

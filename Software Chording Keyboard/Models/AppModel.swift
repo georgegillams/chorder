@@ -14,7 +14,7 @@ class AppModel: ObservableObject {
         get {
             return Double(appSettings.millisecondsToHold.replacingOccurrences(of: "ms", with: "")) ?? 0
         }
-    }
+    } 
     
     public func addChord(chord: Chord) {
         appSettings.chords.append(chord)

@@ -27,12 +27,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     /* Typing */
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
-    var lastKeydown: Int64 = 0
-    var needsSpaceNext = false
-    
-    /* Constants */
-    let backspaceKeyCode = CGKeyCode(51)
-    let leftKey = CGKeyCode(123)
+    var charactersTypedSinceSpaceOwed = 0
+    var owedSpace = false
     
     func keyDownHandler (event: NSEvent) {
         // if the key presses are being sent by this app, we'll ignore them
@@ -46,36 +42,44 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         print("eventKey \(eventKey) character \(character)")
         
         //  Ignore space and backspace and clear inputCharacters
-        if (eventKey == 49 || eventKey == 51) {
+        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey) {
             inputCharacters.removeAllObjects()
-            needsSpaceNext = false
+            owedSpace = false
             return
         }
         
+        if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
+            owedSpace = false
+            return
+        }
+        
+        self.charactersTypedSinceSpaceOwed += 1
+        
         inputCharacters.add(character)
-        lastKeydown = Int64(Date.now.timeIntervalSince1970 * 1000)
         
         var inputKeysString = inputCharacters.componentsJoined(by: "")
         
         print("inputKeysString \(inputKeysString)")
         
-        print("appModel.appSettings.millisecondsToHold \(appModel.millisecondsToHold)")
-        DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.millisecondsToHold/1000)) {
-            var inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
-            print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
-            
-            if(inputKeysString == inputKeysStringAfterDelay) {
+        let chord = self.appModel.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
+        
+        if(chord != nil) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.millisecondsToHold/1000)) {
+                var inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
+                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
                 
-                let chord = self.appModel.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
-                if(chord == nil) {
-                    return
+                var chordEntered = false
+                if(inputKeysString == inputKeysStringAfterDelay) {
+                    
+                    
+                    self.inputCharacters.removeAllObjects()
+                    
+                    let outputKeysString = chord!.output
+                    
+                    self.replaceCharacters(chord: chord!, includeSpace: true)
+                    self.owedSpace = true
+                    self.charactersTypedSinceSpaceOwed = 0
                 }
-                self.inputCharacters.removeAllObjects()
-                
-                let outputKeysString = chord!.output
-                
-                self.replaceCharacters(chord: chord!, includeSpace: self.needsSpaceNext)
-                self.needsSpaceNext = chord!.pipeNegativePosition == 0
             }
         }
     }
@@ -83,29 +87,29 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     func keyUpHandler (event: NSEvent) {
         let character = event.characters
         inputCharacters.remove(character)
+        
+        let inputKeysString = inputCharacters.componentsJoined(by: "")
+        let inputEmpty = inputKeysString.count == 0
+        if(inputEmpty && owedSpace && charactersTypedSinceSpaceOwed > 0) {
+            self.owedSpace = false
+            self.ignorekeyPresses = self.charactersTypedSinceSpaceOwed * 2 + 1
+            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+                self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
+            }
+            self.typeText(text: " " )
+            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+                self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
+            }
+        }
     }
     
     func replaceCharacters(chord: Chord, includeSpace: Bool) {
-        //        var outputString = chord.output
-        //        if (includeSpace) {
-        //            outputString = " " + outputString
-        //        }
-        
-        //        var outputChars = Array(chord.output)
-        
-        //        print("outputKeysString \(outputChars)")
-        //
-        //        var outputStrings = outputChars.map { String($0) }
-        //        print("outputStrings \(outputStrings)")
-        //        var outputKeyCodes = outputStrings.map { CGKeyCode(character: $0) ?? CGKeyCode(0) }
-        //        print("outputKeyCodes \(outputKeyCodes)")
-        
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
         ignorekeyPresses = chord.input.count + chord.outputChunks.count + chord.pipeNegativePosition
         
         // clear characters originally typed
         for _ in 0..<chord.deleteCount {
-            pressKey(keyCode: backspaceKeyCode)
+            pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
         }
         
         // enter replacement characters
@@ -119,7 +123,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         // Press left to get cursor to correct position
         for _ in 0..<chord.pipeNegativePosition {
-            pressKey(keyCode: leftKey)
+            pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
     }
     
@@ -131,7 +135,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     
     func typeText(text: String) {
         let utf16Chars = Array(text.utf16)
-        print("utf16Chars \(utf16Chars)")
         
         let event1 = CGEvent(keyboardEventSource: nil, virtualKey: 0x31, keyDown: true);
         event1?.flags = .maskNonCoalesced
@@ -167,7 +170,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         createStatusBarButton()
         
         // TODO: REMOVE:
-//        showSettingsWindow()
+        //        showSettingsWindow()
         
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
@@ -234,7 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         statusBarItem.button?.performClick(nil)
         statusBarItem.menu = nil
     }
-    
+     
     @objc func openFeedback() {
         if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
             NSWorkspace.shared.open(url)
@@ -250,7 +253,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     @objc func quit() {
         NSApp.terminate(self)
     }
-   
+    
     func windowWillClose(_ notification: Notification) {
         windowsOpen -= 1
         updateActivationPolicy()
