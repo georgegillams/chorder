@@ -204,6 +204,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
         
         if let window = settingsWindow {
+            window.isReleasedWhenClosed = false
             window.contentView?.wantsLayer = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .visible
@@ -254,7 +255,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         windowsOpen -= 1
         updateActivationPolicy()
-        settingsWindow = nil
     }
     
     func updateActivationPolicy() {
