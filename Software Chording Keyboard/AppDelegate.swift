@@ -31,6 +31,12 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var owedSpace = false
     
     func keyDownHandler (event: NSEvent) {
+        // Ignore if any modifier keys are held
+        if(event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
+           || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.function)) {
+            return
+        }
+
         // if the key presses are being sent by this app, we'll ignore them
         if(ignorekeyPresses > 0) {
             ignorekeyPresses -= 1
