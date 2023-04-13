@@ -8,7 +8,7 @@
 import Cocoa
 import Foundation
 import AppKit
-import SwiftUI 
+import SwiftUI
 
 class KeyboardConstants {
     static let spaceEventKey = 49

@@ -14,12 +14,12 @@ struct SettingsView: View {
     @State private var creatingChord = false
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
-    
-    
+
+
     init(appModel: AppModel) {
         self.appModel = appModel
     }
-    
+
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {

@@ -12,15 +12,15 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 let maximumOutputChunkLength = 10
 
 class Chord: Identifiable {
-    
+
     var input: String
     var inputSorted: String
     var deleteCount: Int
     var output: String
     var outputChunks: [String] = []
     var pipeNegativePosition: Int
-    
-    
+
+
     init(input: String, output: String) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
@@ -28,37 +28,37 @@ class Chord: Identifiable {
         self.deleteCount = 0
         self.pipeNegativePosition = 0
         self.inputSorted = String(input.sorted())
-        
+
         // replace escaped pipes with a placeholder
         let escapedPipePlaceholder = findSpecialCharNotInString(str: output)
         let escapedOutput = output.replacingOccurrences(of: "\\|", with: escapedPipePlaceholder)
-        
+
         // check that there is only one un-escaped pipe
         if(escapedOutput.components(separatedBy: "|").count > 2) {
             print("Error: Chord output has more than one pipe")
             return
         }
-        
+
         // find unewscaped pipe position in output string
         let pipeIdx = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
         let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIdx)
-        
+
         // remove pipes from output string
         let outputWithoutPipes = escapedOutput.replacingOccurrences(of: "|", with: "")
-        
+
         // return pipe placeholders
         let outputWithPipes = outputWithoutPipes.replacingOccurrences(of: escapedPipePlaceholder, with: "|")
-        
+
         self.deleteCount = input.count
         self.outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
         self.pipeNegativePosition = escapedOutput.count - pipePosition
-        
+
         if(self.pipeNegativePosition > 0) {
             // subtract one from the pipe position, as the pipe won't be output so we don't need to go back an extra time for the pipe.
             self.pipeNegativePosition -= 1
         }
     }
-    
+
     func findSpecialCharNotInString (str: String) -> String {
         for char in SPECIAL_CHARS {
             if(!str.contains(String(char))) {

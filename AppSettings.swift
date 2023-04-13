@@ -19,7 +19,7 @@ class AppSettings {
             writeAppSettingsToFile()
         }
     }
-    
+
     /* Calculated */
     private(set) public var millisecondsToHold: Double
     private(set) public var alphabeticalInputOutputMappingDictionary: [String: Chord] = [:]
@@ -43,7 +43,7 @@ class AppSettings {
             return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("software_chording_keyboard_settings.json")
         }
     }
-    
+
     init() {
         chords = []
         millisecondsToHoldStr = "60ms"
@@ -53,23 +53,23 @@ class AppSettings {
         readAppSettingsFromFile()
         initComplete = true
     }
-    
+
     public func addChord(chord: Chord) {
         chords.append(chord)
         recalculateAlphabeticalMapping()
         writeAppSettingsToFile()
     }
-    
+
     public func removeChords(chords: Set<Chord.ID>) {
         self.chords.removeAll(where: { chords.contains($0.id) })
         recalculateAlphabeticalMapping()
         writeAppSettingsToFile()
     }
-    
+
     public func recalculateAppSettings () {
         recalculateAlphabeticalMapping()
     }
-    
+
     func recalculateAlphabeticalMapping() {
         alphabeticalInputOutputMappingDictionary = [:]
         for chord in chords {
@@ -136,7 +136,7 @@ class AppSettings {
             print("ERROR \(error)")
         }
     }
-    
+
     func readAppSettingsFromFile() {
         if (FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
             do {
