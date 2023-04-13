@@ -22,6 +22,7 @@ class Chord: Identifiable {
     
     
     init(input: String, output: String) {
+        // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
         self.output = output
         self.deleteCount = 0
@@ -30,7 +31,6 @@ class Chord: Identifiable {
         
         // replace escaped pipes with a placeholder
         let escapedPipePlaceholder = findSpecialCharNotInString(str: output)
-        print("escapedPipePlaceholder \(escapedPipePlaceholder)")
         let escapedOutput = output.replacingOccurrences(of: "\\|", with: escapedPipePlaceholder)
         
         // check that there is only one un-escaped pipe
@@ -49,9 +49,7 @@ class Chord: Identifiable {
         // return pipe placeholders
         let outputWithPipes = outputWithoutPipes.replacingOccurrences(of: escapedPipePlaceholder, with: "|")
         
-        self.input = input
         self.deleteCount = input.count
-        self.output = outputWithPipes
         self.outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
         self.pipeNegativePosition = escapedOutput.count - pipePosition
         
@@ -59,8 +57,6 @@ class Chord: Identifiable {
             // subtract one from the pipe position, as the pipe won't be output so we don't need to go back an extra time for the pipe.
             self.pipeNegativePosition -= 1
         }
-        
-        print("input: \(input), output: \(outputWithPipes), pipeNegativePosition: \(pipeNegativePosition)")
     }
     
     func findSpecialCharNotInString (str: String) -> String {

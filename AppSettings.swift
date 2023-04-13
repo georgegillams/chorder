@@ -9,6 +9,8 @@ import Foundation
 import SwiftUI
 
 class AppSettings {
+    private var initComplete: Bool = false
+
     /* Raw settings */
     private(set) public var chords: [Chord]
     @Published public var millisecondsToHoldStr: String {
@@ -43,44 +45,13 @@ class AppSettings {
     }
     
     init() {
-        // TODO: Remove this once read from file
-        chords = [
-            Chord(input: "th", output : "the"),
-            Chord(input: "cn", output: "const"),
-            Chord(input: "ne", output:"new"),
-            Chord(input: "rt", output: "return"),
-            Chord(input: "sck", output: "software chording keyboard"),
-            Chord(input: "typ", output: "Typeform"),
-            Chord(input: "typw", output: "typeform.com"),
-            Chord(input: "ge", output: "georgegillams.co.uk"),
-            Chord(input: "fn", output: "const | = () => {}"),
-            Chord(input: "ty", output: "type"),
-            Chord(input: "at", output: "at"),
-            Chord(input: "sp", output: "speed"),
-            Chord(input: "of", output: "of"),
-            Chord(input: "tho", output: "thought"),
-            Chord(input: "bet", output: "better"),
-            Chord(input: "st", output: "stronger"),
-            Chord(input: "fas", output: "faster"),
-            Chord(input: "yh", output: "yeah"),
-            Chord(input: "tnk", output: "thanks"),
-            Chord(input: "alr", output: "already"),
-            Chord(input: "fn2", output: "const | = () => {\\|}"),
-            Chord(input: "fn3", output: "const \\| = (*) => {|}"),
-            Chord(input: "ni", output: "nice"),
-            Chord(input: "ye", output: "yes"),
-            Chord(input: "se", output: "see"),
-            Chord(input: "yo", output: "you"),
-            Chord(input: "hv", output: "have"),
-            Chord(input: "cd", output: "code"),
-            Chord(input: "in", output: "in")
-        ]
+        chords = []
         millisecondsToHoldStr = "60ms"
         millisecondsToHold = 60
-        // TODO: End remove
 
         loadSecureBookmarks()
         readAppSettingsFromFile()
+        initComplete = true
     }
     
     public func addChord(chord: Chord) {
@@ -106,24 +77,42 @@ class AppSettings {
         }
     }
 
+    func deserialiseChords(serialisableChords: [[String: String]]) -> [Chord] {
+        var chords: [Chord] = []
+        for serialisableChord in serialisableChords {
+            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? ""))
+        }
+        return chords
+    }
+
     func parseSettingsFromJson(json: String) {
         let jsonDecoder = JSONDecoder()
         let jsonData = json.data(using: .utf8)!
         do {
-        let serialisableSettings = try jsonDecoder.decode(SerialisableAppSettings.self, from: jsonData)
-        millisecondsToHoldStr = serialisableSettings.millisecondsToHold
+            let serialisableSettings = try jsonDecoder.decode(SerialisableAppSettings.self, from: jsonData)
+            millisecondsToHoldStr = serialisableSettings.millisecondsToHold
+            chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
+            recalculateAlphabeticalMapping()
         } catch {
             print("Error deserialising data \(error)")
         }
     }
 
+    func serialiseChords(chords: [Chord]) -> [[String: String]] {
+        var serialisableChords: [[String: String]] = []
+        for chord in chords {
+            serialisableChords.append(["input": chord.input, "output": chord.output])
+        }
+        return serialisableChords
+    }
+
     func getSettingsJsonString() -> String{
-        let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr)
+        let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr, chords: serialiseChords(chords: chords) )
 
         let jsonEncoder = JSONEncoder()
         do {
-        let jsonData = try jsonEncoder.encode(serialisableSettings)
-        let json = String(data: jsonData, encoding: String.Encoding.utf8) ?? ""
+            let jsonData = try jsonEncoder.encode(serialisableSettings)
+            let json = String(data: jsonData, encoding: String.Encoding.utf8) ?? ""
             return json
         } catch {
             print("Error serialising data \(error)")
@@ -132,6 +121,10 @@ class AppSettings {
     }
 
     func writeAppSettingsToFile() {
+        if(!initComplete) {
+            return
+        }
+
         let jsonString = getSettingsJsonString()
 
         do {
@@ -248,4 +241,5 @@ class AppSettings {
 
 struct SerialisableAppSettings: Codable {
     var millisecondsToHold: String
+    var chords: [[String: String]]
 }
