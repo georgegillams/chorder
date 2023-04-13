@@ -39,7 +39,7 @@ struct SettingsView: View {
                                 Text("+").font(.title2)
                             }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
                             Button(action: {
-                                appModel.removeChords(chords: selectedChords)
+                                appModel.appSettings.removeChords(chords: selectedChords)
                                 selectedChords.removeAll()
                             }) {
                                 Text("-").font(.title2)
@@ -57,10 +57,25 @@ struct SettingsView: View {
                             Text("Note they delay in ms must be smaller than the key repeat delay in your system settings, otherwise the chords will not work properly.").font(.caption).foregroundColor(.secondary)
                         }
                         Spacer()
-                        TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHold).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
+                        TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
                     }
                 }
                 // Configuration
+                VStack(alignment: .leading) {
+                    Text("Configuration").font(.headline)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Settings backup location")
+                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they’re never lost!").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button(action: {
+                            delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
+                        }) {
+                            Text("Choose backup location").font(Font.caption)
+                        }
+                    }
+                }
                 // Contact
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
             if(creatingChord) {
@@ -78,20 +93,20 @@ struct SettingsView: View {
                             newChordInput = ""
                             newChordOutput = ""
                         }) {
-                            Text("Cancel").font(.title2)
+                            Text("Cancel").font(Font.caption)
                         }
                         Button(action: {
                             creatingChord = false
-                            appModel.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
+                            appModel.appSettings.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
                             newChordInput = ""
                             newChordOutput = ""
                         }) {
-                            Text("Save").font(.title2)
+                            Text("Save").font(Font.caption)
                         }
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
-        }.frame(minWidth: 300, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity, alignment: .center)
+        }.frame(minWidth: 400, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
     }
 }
 

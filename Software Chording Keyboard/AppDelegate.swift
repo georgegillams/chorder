@@ -39,7 +39,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         let eventKey = event.keyCode
         let character = event.characters
-        print("eventKey \(eventKey) character \(character)")
+        //        print("eventKey \(eventKey) character \(character)")
         
         //  Ignore space and backspace and clear inputCharacters
         if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey) {
@@ -57,24 +57,19 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         inputCharacters.add(character)
         
-        var inputKeysString = inputCharacters.componentsJoined(by: "")
+        let inputKeysString = inputCharacters.componentsJoined(by: "")
         
-        print("inputKeysString \(inputKeysString)")
+        //        print("inputKeysString \(inputKeysString)")
         
-        let chord = self.appModel.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
+        let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
         
         if(chord != nil) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.millisecondsToHold/1000)) {
-                var inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
-                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.appSettings.millisecondsToHold/1000)) {
+                let inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
+                //                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
                 
-                var chordEntered = false
                 if(inputKeysString == inputKeysStringAfterDelay) {
-                    
-                    
                     self.inputCharacters.removeAllObjects()
-                    
-                    let outputKeysString = chord!.output
                     
                     self.replaceCharacters(chord: chord!, includeSpace: true)
                     self.owedSpace = true
@@ -166,11 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         updateActivationPolicy()
         
         checkInputAccess()
-        appModel.reloadAppSettings()
         createStatusBarButton()
-        
-        // TODO: REMOVE:
-        //        showSettingsWindow()
         
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
@@ -237,7 +228,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         statusBarItem.button?.performClick(nil)
         statusBarItem.menu = nil
     }
-     
+    
     @objc func openFeedback() {
         if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
             NSWorkspace.shared.open(url)
@@ -270,6 +261,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
+        appModel.appSettings.closeSettingsFileAccess()
     }
     
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
