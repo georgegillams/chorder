@@ -20,6 +20,7 @@
 		08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2329DE1CAD0081AB4E /* Settings.swift */; };
 		08E19F2629DECCAA0081AB4E /* About.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2529DECCAA0081AB4E /* About.swift */; };
 		08E19F2829DF11FC0081AB4E /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2729DF11FC0081AB4E /* AppModel.swift */; };
+		08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE66FF29E9584000F4A6E5 /* BookMarks.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		08E19F2329DE1CAD0081AB4E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		08E19F2529DECCAA0081AB4E /* About.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = About.swift; sourceTree = "<group>"; };
 		08E19F2729DF11FC0081AB4E /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		08EE66FF29E9584000F4A6E5 /* BookMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookMarks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +160,7 @@
 				08E19F1E29DE1A820081AB4E /* AppSettings.swift */,
 				08E19F2029DE1A950081AB4E /* Chord.swift */,
 				08E19F2729DF11FC0081AB4E /* AppModel.swift */,
+				08EE66FF29E9584000F4A6E5 /* BookMarks.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -305,6 +308,7 @@
 				08E19EF429DE19F80081AB4E /* ViewController.swift in Sources */,
 				08E19F2629DECCAA0081AB4E /* About.swift in Sources */,
 				08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */,
+				08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */,
 				08E19F2129DE1A950081AB4E /* Chord.swift in Sources */,
 				08E19F1F29DE1A820081AB4E /* AppSettings.swift in Sources */,
 				08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */,
