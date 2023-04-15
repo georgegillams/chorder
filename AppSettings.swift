@@ -25,14 +25,7 @@ class AppSettings {
     private(set) public var alphabeticalInputOutputMappingDictionary: [String: Chord] = [:]
 
     /* Storage */
-    var bookmarks = [URL: Data]()
-    var bookmarksPath: String{
-        get {
-            var url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] as URL
-            url = url.appendingPathComponent("Bookmarks.dict")
-            return url.path
-        }
-    }
+    var bookmarks: BookMarks
     var settingsFileDirectory: URL?
     var settingsFileLocation: URL {
         get {
@@ -49,7 +42,8 @@ class AppSettings {
         millisecondsToHoldStr = "60ms"
         millisecondsToHold = 60
 
-        loadSecureBookmarks()
+        settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
+        bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
         readAppSettingsFromFile()
         initComplete = true
     }
@@ -110,6 +104,7 @@ class AppSettings {
         let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr, chords: serialiseChords(chords: chords) )
 
         let jsonEncoder = JSONEncoder()
+        jsonEncoder.outputFormatting = .prettyPrinted
         do {
             let jsonData = try jsonEncoder.encode(serialisableSettings)
             let json = String(data: jsonData, encoding: String.Encoding.utf8) ?? ""
@@ -177,59 +172,9 @@ class AppSettings {
 
     func updateSettingsLocation(newLocation: URL) {
         settingsFileDirectory = newLocation
-
-        do
-        {
-            let data = try newLocation.bookmarkData(options: NSURL.BookmarkCreationOptions.withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-            bookmarks[newLocation] = data
-            NSKeyedArchiver.archiveRootObject(bookmarks, toFile: bookmarksPath)
-        }
-        catch
-        {
-            Swift.print ("Error storing bookmarks")
-        }
+        UserDefaults.standard.set(newLocation, forKey: "settingsFileDirectory")
+        bookmarks.store(url: newLocation)
         writeAppSettingsToFile()
-    }
-
-    func loadSecureBookmarks() {
-        if (!FileManager.default.fileExists(atPath: bookmarksPath)) {
-            return
-        }
-
-        bookmarks = NSKeyedUnarchiver.unarchiveObject(withFile: bookmarksPath) as! [URL: Data]
-        for bookmark in bookmarks
-        {
-            let restoredUrl: URL?
-            var isStale = false
-
-            Swift.print ("Restoring \(bookmark.key)")
-            do
-            {
-                restoredUrl = try URL.init(resolvingBookmarkData: bookmark.value, options: NSURL.BookmarkResolutionOptions.withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
-            }
-            catch
-            {
-                Swift.print ("Error restoring bookmarks")
-                restoredUrl = nil
-            }
-
-            if let url = restoredUrl
-            {
-                if isStale
-                {
-                    Swift.print ("URL is stale")
-                }
-                else
-                {
-                    if !url.startAccessingSecurityScopedResource()
-                    {
-                        Swift.print ("Couldn't access: \(url.path)")
-                    }
-                    settingsFileDirectory = url
-                }
-            }
-
-        }
     }
 
     public func closeSettingsFileAccess() {
