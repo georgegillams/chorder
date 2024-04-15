@@ -39,9 +39,9 @@ class Chord: Identifiable {
             return
         }
 
-        // find unewscaped pipe position in output string
-        let pipeIdx = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
-        let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIdx)
+        // find unescaped pipe position in output string
+        let pipeIndex = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
+        let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIndex)
 
         // remove pipes from output string
         let outputWithoutPipes = escapedOutput.replacingOccurrences(of: "|", with: "")

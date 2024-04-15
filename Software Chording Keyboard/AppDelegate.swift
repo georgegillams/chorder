@@ -10,10 +10,20 @@ import Foundation
 import AppKit
 import SwiftUI
 
+/*
+ Lifecycles:
+ - When a key is pressed, we add the key to the list of currently pressed keys.
+ - When a key is released, we remove it from the list of currently pressed keys.
+
+ - If our pressed keys buffer matches one of the chords, then we'll wait the chord hold timespan.
+   - After this time has passed no keys have been added or removed, then we proceed to replace the entered characters with the replacement text.
+     - At this stage, a space is added then immediately removed (this way if the user has just started a new sentence with a chord, then the system will capitailise it).
+
+ - When a key is  pressed, we check to see if a space is owed. If a space is owed, and this is the first key to be pressed,we go back and add the space.
+ */
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
-
     /* Application */
     let appModel = AppModel()
 
@@ -47,14 +57,31 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let character = event.characters
         //        print("eventKey \(eventKey) character \(character)")
 
-        //  Ignore space and backspace and clear inputCharacters
+        //  Ignore space and backspace and clea
+         inputCharacters
         if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey) {
-            inputCharacters.removeAllObjects()
+//            inputCharacters.removeAllObjects()
             owedSpace = false
             return
         }
+        
+                print("owedSpace \(owedSpace)")
+        print("char \(character)")
+        let inputEmpty = inputCharacters.count == 0
+        
+// TODO: Could it help to check if `inputEmpty` here?
+        if( owedSpace){
+            print("ADDING SPACE")
+            owedSpace = false
+//            Note: We don't need to set any ignored key-presses, as left, right and space are already ignored
+                            self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
+            //            }
+                        self.typeText(text: " " )
+            //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+                            self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
+        }
 
-        if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
+        if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey || eventKey == KeyboardConstants.spaceEventKey) {
             owedSpace = false
             return
         }
@@ -62,10 +89,15 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         self.charactersTypedSinceSpaceOwed += 1
 
         inputCharacters.add(character)
+        print ("inputCharacters \(inputCharacters)")
 
+        if (inputCharacters.count < 2){
+            return
+        }
+        
         let inputKeysString = inputCharacters.componentsJoined(by: "")
 
-        //        print("inputKeysString \(inputKeysString)")
+                print("inputKeysString \(inputKeysString)")
 
         let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
 
@@ -77,7 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                 if(inputKeysString == inputKeysStringAfterDelay) {
                     self.inputCharacters.removeAllObjects()
 
-                    self.replaceCharacters(chord: chord!, includeSpace: true)
+                    self.replaceCharacters(chord: chord!, includeSpace: false)
                     self.owedSpace = true
                     self.charactersTypedSinceSpaceOwed = 0
                 }
@@ -89,23 +121,24 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let character = event.characters
         inputCharacters.remove(character)
 
-        let inputKeysString = inputCharacters.componentsJoined(by: "")
-        let inputEmpty = inputKeysString.count == 0
-        if(inputEmpty && owedSpace && charactersTypedSinceSpaceOwed > 0) {
-            self.owedSpace = false
-            self.ignorekeyPresses = self.charactersTypedSinceSpaceOwed * 2 + 1
-            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-                self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
-            }
-            self.typeText(text: " " )
-            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-                self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
-            }
-        }
+//        let inputKeysString = inputCharacters.componentsJoined(by: "")
+//        let inputEmpty = inputKeysString.count == 0
+//        if(inputEmpty && owedSpace && charactersTypedSinceSpaceOwed > 0) {
+//            self.owedSpace = false
+//            self.ignorekeyPresses = self.charactersTypedSinceSpaceOwed * 2 + 1
+//            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+//                self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
+//            }
+//            self.typeText(text: " " )
+//            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+//                self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
+//            }
+//        }
     }
 
     func replaceCharacters(chord: Chord, includeSpace: Bool) {
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
+//        TODO: Added 1 at end for backspace
         ignorekeyPresses = chord.input.count + chord.outputChunks.count + chord.pipeNegativePosition
 
         // clear characters originally typed
@@ -119,8 +152,17 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             if (i == 0 && includeSpace) {
                 outputString = " " + outputString
             }
+//            if (i == chord.outputChunks.count - 1) {
+//                outputString = outputString + " "
+//            }
             typeText(text: outputString)
         }
+        print("typed \(chord.outputChunks)")
+        // TODO: Fix this
+//        pressKey(keyCode: KeyboardConstants.spaceKeyCode)
+//        DispatchQueue.main.asyncAfter(deadline: .now() +  300/1000) {
+//            self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
+//        }
 
         // Press left to get cursor to correct position
         for _ in 0..<chord.pipeNegativePosition {

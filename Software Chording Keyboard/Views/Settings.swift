@@ -23,7 +23,8 @@ struct SettingsView: View {
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {
-                // Statistics
+                // TODO: Statistics
+                
                 // Chords
                 VStack(alignment: .leading) {
                     Text("Chords").font(.headline)
@@ -46,8 +47,9 @@ struct SettingsView: View {
                             }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20).disabled(selectedChords.isEmpty)
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
-                    }.cornerRadius(6)
+                    }.cornerRadius(8)
                 }
+                
                 // Input
                 VStack(alignment: .leading) {
                     Text("Input").font(.headline)
@@ -60,6 +62,7 @@ struct SettingsView: View {
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
                     }
                 }
+                
                 // Configuration
                 VStack(alignment: .leading) {
                     Text("Configuration").font(.headline)
@@ -76,16 +79,19 @@ struct SettingsView: View {
                         }
                     }
                 }
-                // Contact
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
+            
+            // Create
             if(creatingChord) {
                 VStack(alignment: .leading) {
-                    Text("New chord").font(.headline)
+                    Text("New chord").font(.headline).padding(.bottom,8)
                     Text("Chord input")
-                    TextField("Chord input", text: $newChordInput)
+                    TextField("Chord input", text: $newChordInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
                     Text("Chord output")
-                    TextField("Chord output", text: $newChordOutput)
-                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary)
+                    TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
+                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
                     HStack {
                         Spacer()
                         Button(action: {
