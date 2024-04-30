@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import LaunchAtLogin
 
 struct SettingsView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
@@ -14,12 +15,13 @@ struct SettingsView: View {
     @State private var creatingChord = false
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
-
-
+    @State private var isChecked = false
+    
+    
     init(appModel: AppModel) {
         self.appModel = appModel
     }
-
+    
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {
@@ -48,6 +50,7 @@ struct SettingsView: View {
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
                     }.cornerRadius(8)
+                    Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
                 }
                 
                 // Input
@@ -66,6 +69,16 @@ struct SettingsView: View {
                 // Configuration
                 VStack(alignment: .leading) {
                     Text("Configuration").font(.headline)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Launch at log in")
+                            Text("Automatically start this app when you login so that you're always ready to get chording!").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle(isOn: $isChecked) {}.toggleStyle(.switch).onChange(of: isChecked){ value in
+                            LaunchAtLogin.isEnabled = value
+                        }
+                    }.padding(.bottom, 8)
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Settings backup location")
@@ -112,7 +125,7 @@ struct SettingsView: View {
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
-        }.frame(minWidth: 400, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
+        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
     }
 }
 

@@ -11,16 +11,60 @@ import AppKit
 import SwiftUI
 
 /*
- Lifecycles:
- - When a key is pressed, we add the key to the list of currently pressed keys.
- - When a key is released, we remove it from the list of currently pressed keys.
  
- - If our pressed keys buffer matches one of the chords, then we'll wait the chord hold timespan.
- - After this time has passed no keys have been added or removed, then we proceed to replace the entered characters with the replacement text.
- - At this stage, a space is added then removed (this way if the user has just started a new sentence with a chord, then the system will capitailise it).
+ # App features
  
- - When a key is  pressed, we check to see if a space is owed. If a space is owed, and this is the first key to be pressed, we go back and add the space before the just-typed-character.
+ ## Persistence
+ - [x] When the app is first started, if a config file is set, it loads settings from this file.
+ - [x] When the app is first started, if not, the default config is used.
+ - [ ] When the user selects a config file location that already has config, they are asked if they want to read it or overwrite it.
+ 
+ ## Customisation
+ - [x] A user can add and remove chords from the UI.
+ - [x] A user can set the chord hold duration.
+ 
+ ## System
+ - [x] The app can auto-start with the system.
+
+ ## Statistics
+ - [ ] The app records statistics about chords used and missed, and persists these to file periodically.
+ - [ ] The app can show a user their statistics.
+ 
+ ## UI
+ - [ ] The current capitalisation mode is reflected in the menu-bar icon.
+ - [ ] The UI represents single and chained chords.
+ - [ ] The UI prevents adding conflicting chords.
+ 
+ 
+
+ # Lifecycles
+ 
+ ## Basics
+ - [x] When a key is pressed, we add the key to the list of currently pressed keys.
+ - [x] When a key is released, we remove it from the list of currently pressed keys.
+ - [x] When a key is pressed, we trigger a delay for the chord hold timespan. If after this time, the same combination of keys is pressed, we consider this a chord.
+ - [ ] When a chord is detected, it is added to the chord history. At this point, if the chord matches one of our config, the letters typed are removed and the chord output typed.
+ - [ ] If the last 2 chords form a chained chord, the previous input and new input are removed and all replaced with the chained chord.
+ 
+ ## Spaces
+ - [x] If a chord is entered, we enter space-owed mode.
+ - [x] When a key is pressed, if a space is owed, and this is the first key to be pressed, we go back and add the space before the just-typed-character. Space-owed is then off.
+ - [ ] If the user presses backspace, space, punctuation etc, then space-owed is set off.
+ 
+ ## Capitalisation
+ - [x] When the shift key is pressed down and then released (without any other key-presses in between, we toggle capitalisation mode.
+ - [x] If the shift key is pressed and released, we enter first-capitalisation mode, where the first character will be capitalised on chord entry.
+ - [x] If the shift key is pressed and released again, we enter full-capitalisation mode, where the whole chord will be capitalised on chord entry.
+ - [x] If the shift key is pressed and released a third time, capitalisation mode is turned off.
+ - [x] After a chord is entered, capitalisation mode is turned off.
+ - [x] When backspace, esc, etc are pressed capitalisation mode is turned off.
  */
+
+extension String {
+    func capitalizeFirstLetter() -> String {
+        return prefix(1).uppercased() + self.lowercased().dropFirst()
+    }
+}
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
@@ -40,14 +84,44 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var charactersTypedSinceSpaceOwed = 0
     var owedSpace = false
     var aboutToRemoveSpace = false
+    var shiftPressedDown = false
+    var capitalisationMode = CapitalisationMode.off
+    
+    func flagsChangedHandler (event: NSEvent) {
+        if(event.modifierFlags.contains(.shift)){
+            shiftPressedDown = true
+        } else if(shiftPressedDown) {
+            // When shift is released again, but only if no other keys have been pressed in the meantime.
+            switch capitalisationMode {
+            case .off:
+                capitalisationMode = .singleCharacter
+                break
+            case .singleCharacter:
+                capitalisationMode = .fullCapitalisation
+                break
+            case .fullCapitalisation:
+                capitalisationMode = .off
+                break
+            }
+        }
+    }
     
     func keyDownHandler (event: NSEvent) {
-        print("ignorekeyPresses \(ignorekeyPresses)")
         // if the key presses are being sent by this app, we'll ignore them
         if(ignorekeyPresses > 0) {
             ignorekeyPresses -= 1
+            print("ignorekeyPresses \(ignorekeyPresses)")
             return
         }
+        
+        let eventKey = event.keyCode
+        let character = event.characters
+        print("eventKey \(eventKey) character \(character)")
+        
+        shiftPressedDown = false
+        
+        
+        
         
         // Ignore if any modifier keys are held
         if(event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
@@ -56,19 +130,15 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
         
         
-        let eventKey = event.keyCode
-        let character = event.characters
-        //        print("eventKey \(eventKey) character \(character)")
-        
-        //  Ignore space and backspace and clea
-        inputCharacters
-        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey) {
-            //            inputCharacters.removeAllObjects()
+        //  Ignore space and backspace and clear inputCharacters
+        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey) {
+            capitalisationMode = .off
+            inputCharacters.removeAllObjects()
             owedSpace = false
             return
         }
         
-        if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey || eventKey == KeyboardConstants.spaceEventKey) {
+        if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
             owedSpace = false
             return
         }
@@ -79,21 +149,15 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         // TODO: Could it help to check if `inputEmpty` here?
         if( owedSpace){
-            if(self.aboutToRemoveSpace){
-                print("SUPPRESSING SPACE REMOVAL")
-                self.owedSpace = false
-                self.aboutToRemoveSpace = false
-            }else{
-                print("ADDING SPACE")
-                
-                owedSpace = false
-                //            Note: We don't need to set any ignored key-presses, as left, right and space are already ignored
-                self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
-                //            }
-                self.typeText(text: " " )
-                //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-                self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
-            }
+            print("ADDING SPACE")
+            self.ignorekeyPresses += 3
+            owedSpace = false
+            //            Note: We don't need to set any ignored key-presses, as left, right and space are already ignored
+            self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
+            //            }
+            self.typeText(text: " " )
+            //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
+            self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
         }
         
         self.charactersTypedSinceSpaceOwed += 1
@@ -109,17 +173,19 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         print("inputKeysString \(inputKeysString)")
         
-        let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
         
-        if(chord != nil) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.appSettings.millisecondsToHold/1000)) {
-                let inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
-                //                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.appSettings.millisecondsToHold/1000)) {
+            let inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
+            //                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
+            
+            if(inputKeysString == inputKeysStringAfterDelay) {
+                let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
                 
-                if(inputKeysString == inputKeysStringAfterDelay) {
-//                    self.inputCharacters.removeAllObjects()
+                if(chord != nil) {
+                    //                    self.inputCharacters.removeAllObjects()
                     
                     self.replaceCharacters(chord: chord!)
+                    self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
                     self.charactersTypedSinceSpaceOwed = 0
                 }
@@ -146,9 +212,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         //        }
     }
     
+    
     func replaceCharacters(chord: Chord) {
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
-        //        TODO: Added 1 at end for backspace
         ignorekeyPresses += chord.input.count + chord.outputChunks.count + chord.pipeNegativePosition
         
         // clear characters originally typed
@@ -159,29 +225,40 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // enter replacement characters
         for i in 0..<chord.outputChunks.count {
             var outputString = chord.outputChunks[i]
-//            if (i == 0 && includeSpace) {
-//                outputString = " " + outputString
-//            }
-            if (i == chord.outputChunks.count - 1 && !chord.hasPipe) {
-                outputString = outputString + " "
+            switch capitalisationMode {
+            case .singleCharacter:
+                if(i == 0){
+                  outputString = outputString.capitalizeFirstLetter()
+                }
+                break
+            case .fullCapitalisation:
+                outputString = outputString.uppercased()
+                break
+            default:
+                break
             }
+            //            if (i == 0 && includeSpace) {
+            //                outputString = " " + outputString
+            //            }
+            //            if (i == chord.outputChunks.count - 1 && !chord.hasPipe) {
+            //                outputString = outputString + " "
+            //            }
             typeText(text: outputString)
         }
         print("typed \(chord.outputChunks)")
-        if(!chord.hasPipe){
-            
-        self.aboutToRemoveSpace = true
-        // TODO: Fix this
-        //        pressKey(keyCode: KeyboardConstants.spaceKeyCode)
-        DispatchQueue.main.asyncAfter(deadline: .now() +  500/1000) {
-            if(self.aboutToRemoveSpace){
-                self.aboutToRemoveSpace = false
-                self.ignorekeyPresses += 1
-                print("Press backspaces")
-                self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
-            }
-        }
-        }
+        //        if(!chord.hasPipe){
+        //
+        //            // TODO: Fix this
+        //            //        pressKey(keyCode: KeyboardConstants.spaceKeyCode)
+        //            DispatchQueue.main.asyncAfter(deadline: .now() +  500/1000) {
+        //                if(self.aboutToRemoveSpace){
+        //                    self.aboutToRemoveSpace = false
+        //                    self.ignorekeyPresses += 1
+        //                    print("Press backspaces")
+        //                    self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
+        //                }
+        //            }
+        //        }
         
         // Press left to get cursor to correct position
         for _ in 0..<chord.pipeNegativePosition {
@@ -230,6 +307,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         checkInputAccess()
         createStatusBarButton()
         
+        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
     }

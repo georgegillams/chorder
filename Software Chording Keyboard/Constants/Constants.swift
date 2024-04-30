@@ -10,6 +10,10 @@ import Foundation
 import AppKit
 import SwiftUI
 
+enum CapitalisationMode {
+    case off, singleCharacter, fullCapitalisation
+}
+
 class KeyboardConstants {
     static let spaceEventKey = 49
     static let spaceKeyCode = CGKeyCode(spaceEventKey)
@@ -19,4 +23,9 @@ class KeyboardConstants {
     static let leftKeyCode = CGKeyCode(leftEventKey)
     static let rightEventKey = 124
     static let rightKeyCode = CGKeyCode(rightEventKey)
+    static let returnEventKey = 36
+    static let returnKeyCode = CGKeyCode(returnEventKey)
+    static let fullStopEventKey = 47
+    static let fullStopKeyCode = CGKeyCode(returnEventKey)
+//    shiftEventKey
 }
