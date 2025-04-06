@@ -19,7 +19,7 @@ class Chord: Identifiable {
     var output: String
     var outputChunks: [String] = []
     var pipeNegativePosition: Int
-
+    var hasPipe: Bool
 
     init(input: String, output: String) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
@@ -27,6 +27,7 @@ class Chord: Identifiable {
         self.output = output
         self.deleteCount = 0
         self.pipeNegativePosition = 0
+        self.hasPipe = false
         self.inputSorted = String(input.sorted())
 
         // replace escaped pipes with a placeholder
@@ -39,9 +40,9 @@ class Chord: Identifiable {
             return
         }
 
-        // find unewscaped pipe position in output string
-        let pipeIdx = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
-        let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIdx)
+        // find unescaped pipe position in output string
+        let pipeIndex = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
+        let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIndex)
 
         // remove pipes from output string
         let outputWithoutPipes = escapedOutput.replacingOccurrences(of: "|", with: "")
@@ -52,6 +53,7 @@ class Chord: Identifiable {
         self.deleteCount = input.count
         self.outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
         self.pipeNegativePosition = escapedOutput.count - pipePosition
+        self.hasPipe = escapedOutput.contains("|")
 
         if(self.pipeNegativePosition > 0) {
             // subtract one from the pipe position, as the pipe won't be output so we don't need to go back an extra time for the pipe.

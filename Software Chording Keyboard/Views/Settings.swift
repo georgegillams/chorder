@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import LaunchAtLogin
 
 struct SettingsView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
@@ -14,16 +15,18 @@ struct SettingsView: View {
     @State private var creatingChord = false
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
-
-
+    @State private var isChecked = false
+    
+    
     init(appModel: AppModel) {
         self.appModel = appModel
     }
-
+    
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {
-                // Statistics
+                // TODO: Statistics
+                
                 // Chords
                 VStack(alignment: .leading) {
                     Text("Chords").font(.headline)
@@ -46,8 +49,10 @@ struct SettingsView: View {
                             }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20).disabled(selectedChords.isEmpty)
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
-                    }.cornerRadius(6)
+                    }.cornerRadius(8)
+                    Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
                 }
+                
                 // Input
                 VStack(alignment: .leading) {
                     Text("Input").font(.headline)
@@ -60,9 +65,20 @@ struct SettingsView: View {
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
                     }
                 }
+                
                 // Configuration
                 VStack(alignment: .leading) {
                     Text("Configuration").font(.headline)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Launch at log in")
+                            Text("Automatically start this app when you login so that you're always ready to get chording!").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle(isOn: $isChecked) {}.toggleStyle(.switch).onChange(of: isChecked){ value in
+                            LaunchAtLogin.isEnabled = value
+                        }
+                    }.padding(.bottom, 8)
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Settings backup location")
@@ -76,16 +92,19 @@ struct SettingsView: View {
                         }
                     }
                 }
-                // Contact
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
+            
+            // Create
             if(creatingChord) {
                 VStack(alignment: .leading) {
-                    Text("New chord").font(.headline)
+                    Text("New chord").font(.headline).padding(.bottom,8)
                     Text("Chord input")
-                    TextField("Chord input", text: $newChordInput)
+                    TextField("Chord input", text: $newChordInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
                     Text("Chord output")
-                    TextField("Chord output", text: $newChordOutput)
-                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary)
+                    TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
+                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
                     HStack {
                         Spacer()
                         Button(action: {
@@ -106,7 +125,7 @@ struct SettingsView: View {
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
-        }.frame(minWidth: 400, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
+        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
     }
 }
 
