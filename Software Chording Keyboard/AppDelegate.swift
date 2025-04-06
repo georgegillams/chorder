@@ -52,12 +52,12 @@ import SwiftUI
  - [ ] If the user presses backspace, space, punctuation etc, then space-owed is set off.
  
  ## Capitalisation
- - [x] When the shift key is pressed down and then released (without any other key-presses in between, we toggle capitalisation mode.
+ - [x] When the shift key is pressed down and then released (without any other key-presses in between), we toggle capitalisation mode.
  - [x] If the shift key is pressed and released, we enter first-capitalisation mode, where the first character will be capitalised on chord entry.
  - [x] If the shift key is pressed and released again, we enter full-capitalisation mode, where the whole chord will be capitalised on chord entry.
  - [x] If the shift key is pressed and released a third time, capitalisation mode is turned off.
  - [x] After a chord is entered, capitalisation mode is turned off.
- - [x] When backspace, esc, etc are pressed capitalisation mode is turned off.
+ - [x] When backspace, esc, etc are pressed, capitalisation mode is turned off.
  */
 
 extension String {
@@ -86,11 +86,23 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var aboutToRemoveSpace = false
     var shiftPressedDown = false
     var capitalisationMode = CapitalisationMode.off
+    var charactersEnteredDuringShift = false
     
     func flagsChangedHandler (event: NSEvent) {
+//        This is fired whenever shift is toggled, but we have to track its state ourselves
         if(event.modifierFlags.contains(.shift)){
+//           Shift has been pressed
             shiftPressedDown = true
         } else if(shiftPressedDown) {
+            //           Shift has been released
+            shiftPressedDown = false
+            inputCharacters.removeAllObjects()
+            if(charactersEnteredDuringShift){
+                charactersEnteredDuringShift = false
+                capitalisationMode = .off
+                return
+            }
+            
             // When shift is released again, but only if no other keys have been pressed in the meantime.
             switch capitalisationMode {
             case .off:
@@ -104,6 +116,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                 break
             }
         }
+        print("shift pressed \(shiftPressedDown)")
     }
     
     func keyDownHandler (event: NSEvent) {
@@ -118,7 +131,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let character = event.characters
         print("eventKey \(eventKey) character \(character)")
         
-        shiftPressedDown = false
         
         
         
@@ -131,7 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         
         
         //  Ignore space and backspace and clear inputCharacters
-        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey) {
+        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey || eventKey == KeyboardConstants.escapeEventKey) {
             capitalisationMode = .off
             inputCharacters.removeAllObjects()
             owedSpace = false
@@ -143,12 +155,17 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return
         }
         
+        if(shiftPressedDown) {
+            charactersEnteredDuringShift = true
+        }
+        
         print("owedSpace \(owedSpace)")
         print("char \(character)")
         let inputEmpty = inputCharacters.count == 0
-        
+                
         // TODO: Could it help to check if `inputEmpty` here?
-        if( owedSpace){
+//        If shift is pressed, then going left will select the most recent character and overwrite it
+        if(owedSpace && !shiftPressedDown){
             print("ADDING SPACE")
             self.ignorekeyPresses += 3
             owedSpace = false
@@ -182,6 +199,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                 let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
                 
                 if(chord != nil) {
+                    print("** Matched chord: \(chord?.input)")
                     //                    self.inputCharacters.removeAllObjects()
                     
                     self.replaceCharacters(chord: chord!)
@@ -194,8 +212,22 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     }
     
     func keyUpHandler (event: NSEvent) {
+        let eventKey = event.keyCode
         let character = event.characters
-        inputCharacters.remove(character)
+        
+//        TODO: Issue here — when user releases shift key, sometimes pressed character (eg @) is not removed from the character array properly
+//        print("key up event key \(eventKey)")
+//
+//        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey || eventKey == KeyboardConstants.shiftEventKey) {
+//            inputCharacters.removeAllObjects()
+//            return
+//        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + (0.02)) {
+            self.inputCharacters.remove(character)
+            print ("inputCharacters \(self.inputCharacters)")
+        }
+        
         
         //        let inputKeysString = inputCharacters.componentsJoined(by: "")
         //        let inputEmpty = inputKeysString.count == 0

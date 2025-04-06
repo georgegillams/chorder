@@ -19,6 +19,8 @@ class KeyboardConstants {
     static let spaceKeyCode = CGKeyCode(spaceEventKey)
     static let backspaceEventKey = 51
     static let backspaceKeyCode = CGKeyCode(backspaceEventKey)
+    static let escapeEventKey = 53
+    static let escapeKeyCode = CGKeyCode(escapeEventKey)
     static let leftEventKey = 123
     static let leftKeyCode = CGKeyCode(leftEventKey)
     static let rightEventKey = 124
@@ -27,5 +29,6 @@ class KeyboardConstants {
     static let returnKeyCode = CGKeyCode(returnEventKey)
     static let fullStopEventKey = 47
     static let fullStopKeyCode = CGKeyCode(returnEventKey)
-//    shiftEventKey
+    static let shiftEventKey = 52
+    static let shiftKeyCode = CGKeyCode(shiftEventKey)
 }
