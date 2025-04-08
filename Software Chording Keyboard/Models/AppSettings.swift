@@ -10,6 +10,7 @@ import SwiftUI
 
 class AppSettings {
     private var initComplete: Bool = false
+    private var suppressWriting: Bool = false
 
     /* Raw settings */
     private(set) public var chords: [Chord]
@@ -39,10 +40,11 @@ class AppSettings {
 
     init() {
         chords = []
-        millisecondsToHoldStr = "60ms"
-        millisecondsToHold = 60
+        millisecondsToHoldStr = "100ms"
+        millisecondsToHold = 100
 
         settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
+        print("User defaults settingsFileDirectory: \(settingsFileDirectory)")
         bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
         readAppSettingsFromFile()
         initComplete = true
@@ -116,7 +118,7 @@ class AppSettings {
     }
 
     func writeAppSettingsToFile() {
-        if(!initComplete) {
+        if(!initComplete || suppressWriting) {
             return
         }
 
@@ -133,9 +135,13 @@ class AppSettings {
     }
 
     func readAppSettingsFromFile() {
+        // While we read values from file and we're setting them, suppress re-writing to the file again
+        suppressWriting = true
+
         if (FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
             do {
                 let json = try String(contentsOf: settingsFileLocation, encoding: .utf8)
+                print("Read from file: \(json)")
                 parseSettingsFromJson(json: json)
             } catch {
                 print("ERROR \(error)")
@@ -143,6 +149,8 @@ class AppSettings {
         }
 
         recalculateAppSettings()
+
+        suppressWriting = false
     }
 
     func chooseBackupSettingsFileLocation() {
@@ -161,8 +169,20 @@ class AppSettings {
             if (result != nil) {
                 let path = result!.path
                 updateSettingsLocation(newLocation: URL(fileURLWithPath: path))
-                // TODO: If there is a settings file there already, ask if we should read it or overwrite it.
-                writeAppSettingsToFile()
+                if(FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
+                    let alert = NSAlert()
+                    alert.messageText = "Settings file already exists. Do you want to overwrite it, or read from it?"
+                    alert.addButton(withTitle: "Overwrite")
+                    alert.addButton(withTitle: "Read from existing file")
+                    let modalResult = alert.runModal()
+                    if (modalResult == NSApplication.ModalResponse.alertFirstButtonReturn) {
+                        writeAppSettingsToFile()
+                    } else {
+                        readAppSettingsFromFile()
+                    }
+                } else {
+                    writeAppSettingsToFile()
+                }
             }
         } else {
             // User clicked on "Cancel"
@@ -174,7 +194,6 @@ class AppSettings {
         settingsFileDirectory = newLocation
         UserDefaults.standard.set(newLocation, forKey: "settingsFileDirectory")
         bookmarks.store(url: newLocation)
-        writeAppSettingsToFile()
     }
 
     public func closeSettingsFileAccess() {

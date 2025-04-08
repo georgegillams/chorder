@@ -11,46 +11,48 @@ import AppKit
 import SwiftUI
 
 /*
- 
+
  # App features
- 
+
  ## Persistence
  - [x] When the app is first started, if a config file is set, it loads settings from this file.
  - [x] When the app is first started, if not, the default config is used.
  - [ ] When the user selects a config file location that already has config, they are asked if they want to read it or overwrite it.
- 
+
  ## Customisation
  - [x] A user can add and remove chords from the UI.
  - [x] A user can set the chord hold duration.
- 
+
  ## System
  - [x] The app can auto-start with the system.
 
  ## Statistics
  - [ ] The app records statistics about chords used and missed, and persists these to file periodically.
  - [ ] The app can show a user their statistics.
- 
+
  ## UI
  - [ ] The current capitalisation mode is reflected in the menu-bar icon.
+ - [ ] Permissions issues are reflected in the menu.
  - [ ] The UI represents single and chained chords.
  - [ ] The UI prevents adding conflicting chords.
- 
- 
+ - [ ] Onboarding flow for permissions + tutorial
+
+
 
  # Lifecycles
- 
+
  ## Basics
  - [x] When a key is pressed, we add the key to the list of currently pressed keys.
  - [x] When a key is released, we remove it from the list of currently pressed keys.
  - [x] When a key is pressed, we trigger a delay for the chord hold timespan. If after this time, the same combination of keys is pressed, we consider this a chord.
  - [ ] When a chord is detected, it is added to the chord history. At this point, if the chord matches one of our config, the letters typed are removed and the chord output typed.
  - [ ] If the last 2 chords form a chained chord, the previous input and new input are removed and all replaced with the chained chord.
- 
+
  ## Spaces
  - [x] If a chord is entered, we enter space-owed mode.
  - [x] When a key is pressed, if a space is owed, and this is the first key to be pressed, we go back and add the space before the just-typed-character. Space-owed is then off.
  - [ ] If the user presses backspace, space, punctuation etc, then space-owed is set off.
- 
+
  ## Capitalisation
  - [x] When the shift key is pressed down and then released (without any other key-presses in between), we toggle capitalisation mode.
  - [x] If the shift key is pressed and released, we enter first-capitalisation mode, where the first character will be capitalised on chord entry.
@@ -70,14 +72,14 @@ extension String {
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     /* Application */
     let appModel = AppModel()
-    
+
     /* UI */
     var windowsOpen = 0
     var statusBarItem: NSStatusItem!
     var settingsWindow: NSWindow? = nil
     var settingsUI: SettingsView? = nil
     var aboutUI: AboutView? = nil
-    
+
     /* Typing */
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
@@ -87,22 +89,28 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var shiftPressedDown = false
     var capitalisationMode = CapitalisationMode.off
     var charactersEnteredDuringShift = false
-    
+
     func flagsChangedHandler (event: NSEvent) {
-//        This is fired whenever shift is toggled, but we have to track its state ourselves
+        // This is fired whenever shift is toggled, but we have to track its state ourselves
         if(event.modifierFlags.contains(.shift)){
-//           Shift has been pressed
+            // Shift has been pressed
             shiftPressedDown = true
         } else if(shiftPressedDown) {
             //           Shift has been released
             shiftPressedDown = false
+
+            // Remove all characters. There's a strange issue where, sometimes, after shift is released, the characters typed with shift pressed (eg @) remain in the input characters array.
+            // This solves it by clearning input letters when shift is released.
             inputCharacters.removeAllObjects()
+
+
+            // If characters were entered while holding shift, then we'll assume the intent of holding shift was to capitalise those letters, and not to turn on capitilisation mode
             if(charactersEnteredDuringShift){
                 charactersEnteredDuringShift = false
                 capitalisationMode = .off
                 return
             }
-            
+
             // When shift is released again, but only if no other keys have been pressed in the meantime.
             switch capitalisationMode {
             case .off:
@@ -118,7 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
         print("shift pressed \(shiftPressedDown)")
     }
-    
+
     func keyDownHandler (event: NSEvent) {
         // if the key presses are being sent by this app, we'll ignore them
         if(ignorekeyPresses > 0) {
@@ -126,82 +134,82 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             print("ignorekeyPresses \(ignorekeyPresses)")
             return
         }
-        
+
         let eventKey = event.keyCode
         let character = event.characters
         print("eventKey \(eventKey) character \(character)")
-        
-        
-        
-        
-        
+
         // Ignore if any modifier keys are held
         if(event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
            || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.function)) {
             return
         }
-        
-        
+
         //  Ignore space and backspace and clear inputCharacters
-        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey || eventKey == KeyboardConstants.escapeEventKey) {
+        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.escapeEventKey) {
             capitalisationMode = .off
             inputCharacters.removeAllObjects()
             owedSpace = false
             return
         }
-        
+
         if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
+            capitalisationMode = .off
+            inputCharacters.removeAllObjects()
             owedSpace = false
             return
         }
-        
+
+        if(KeyboardConstants.skipPreceedingSpaceCharacters.contains(character ?? "")){
+            if(owedSpace){
+                print("DROPPING OWED SPACE DUE TO PUNCTUATION!")
+            }
+            owedSpace = false;
+        }
+
         if(shiftPressedDown) {
             charactersEnteredDuringShift = true
         }
-        
+
         print("owedSpace \(owedSpace)")
         print("char \(character)")
         let inputEmpty = inputCharacters.count == 0
-                
-        // TODO: Could it help to check if `inputEmpty` here?
-//        If shift is pressed, then going left will select the most recent character and overwrite it
-        if(owedSpace && !shiftPressedDown){
-            print("ADDING SPACE")
-            self.ignorekeyPresses += 3
+
+        if(owedSpace){
             owedSpace = false
-            //            Note: We don't need to set any ignored key-presses, as left, right and space are already ignored
-            self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
-            //            }
-            self.typeText(text: " " )
-            //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-            self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
+
+            print("ADDING SPACE")
+            self.ignorekeyPresses += 2
+            // Note: We don't need to set any ignored key-presses, as backpace and space are already ignored
+            self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
+            self.typeText(text: " \(character ?? "")" )
         }
-        
+
         self.charactersTypedSinceSpaceOwed += 1
-        
+
         inputCharacters.add(character)
         print ("inputCharacters \(inputCharacters)")
-        
+
         if (inputCharacters.count < 2){
             return
         }
-        
+
         let inputKeysString = inputCharacters.componentsJoined(by: "")
-        
+
         print("inputKeysString \(inputKeysString)")
-        
-        
+
+
         DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.appSettings.millisecondsToHold/1000)) {
             let inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "")
-            //                print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
-            
+            // print("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
+
             if(inputKeysString == inputKeysStringAfterDelay) {
                 let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
-                
+
                 if(chord != nil) {
                     print("** Matched chord: \(chord?.input)")
-                    //                    self.inputCharacters.removeAllObjects()
-                    
+                    // self.inputCharacters.removeAllObjects()
+
                     self.replaceCharacters(chord: chord!)
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
@@ -210,57 +218,32 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             }
         }
     }
-    
+
     func keyUpHandler (event: NSEvent) {
         let eventKey = event.keyCode
         let character = event.characters
-        
-//        TODO: Issue here — when user releases shift key, sometimes pressed character (eg @) is not removed from the character array properly
-//        print("key up event key \(eventKey)")
-//
-//        if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.fullStopEventKey || eventKey == KeyboardConstants.shiftEventKey) {
-//            inputCharacters.removeAllObjects()
-//            return
-//        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + (0.02)) {
-            self.inputCharacters.remove(character)
-            print ("inputCharacters \(self.inputCharacters)")
-        }
-        
-        
-        //        let inputKeysString = inputCharacters.componentsJoined(by: "")
-        //        let inputEmpty = inputKeysString.count == 0
-        //        if(inputEmpty && owedSpace && charactersTypedSinceSpaceOwed > 0) {
-        //            self.owedSpace = false
-        //            self.ignorekeyPresses = self.charactersTypedSinceSpaceOwed * 2 + 1
-        //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-        //                self.pressKey(keyCode: KeyboardConstants.leftKeyCode)
-        //            }
-        //            self.typeText(text: " " )
-        //            for _ in 0..<self.charactersTypedSinceSpaceOwed {
-        //                self.pressKey(keyCode: KeyboardConstants.rightKeyCode)
-        //            }
-        //        }
+
+        self.inputCharacters.remove(character)
+        print ("inputCharacters \(self.inputCharacters)")
     }
-    
-    
+
+
     func replaceCharacters(chord: Chord) {
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
         ignorekeyPresses += chord.input.count + chord.outputChunks.count + chord.pipeNegativePosition
-        
+
         // clear characters originally typed
         for _ in 0..<chord.deleteCount {
             pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
         }
-        
+
         // enter replacement characters
         for i in 0..<chord.outputChunks.count {
             var outputString = chord.outputChunks[i]
             switch capitalisationMode {
             case .singleCharacter:
                 if(i == 0){
-                  outputString = outputString.capitalizeFirstLetter()
+                    outputString = outputString.capitalizeFirstLetter()
                 }
                 break
             case .fullCapitalisation:
@@ -269,54 +252,36 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             default:
                 break
             }
-            //            if (i == 0 && includeSpace) {
-            //                outputString = " " + outputString
-            //            }
-            //            if (i == chord.outputChunks.count - 1 && !chord.hasPipe) {
-            //                outputString = outputString + " "
-            //            }
+
             typeText(text: outputString)
         }
         print("typed \(chord.outputChunks)")
-        //        if(!chord.hasPipe){
-        //
-        //            // TODO: Fix this
-        //            //        pressKey(keyCode: KeyboardConstants.spaceKeyCode)
-        //            DispatchQueue.main.asyncAfter(deadline: .now() +  500/1000) {
-        //                if(self.aboutToRemoveSpace){
-        //                    self.aboutToRemoveSpace = false
-        //                    self.ignorekeyPresses += 1
-        //                    print("Press backspaces")
-        //                    self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
-        //                }
-        //            }
-        //        }
-        
+
         // Press left to get cursor to correct position
         for _ in 0..<chord.pipeNegativePosition {
             pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
     }
-    
+
     func pressKey(keyCode: CGKeyCode) {
         let source = CGEventSource(stateID: .hidSystemState)
         let eventDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         eventDown?.post(tap: .cghidEventTap)
     }
-    
+
     func typeText(text: String) {
         let utf16Chars = Array(text.utf16)
-        
+
         let event1 = CGEvent(keyboardEventSource: nil, virtualKey: 0x31, keyDown: true);
         event1?.flags = .maskNonCoalesced
         event1?.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: utf16Chars)
         event1?.post(tap: .cghidEventTap)
-        
+
         let event2 = CGEvent(keyboardEventSource: nil, virtualKey: 0x31, keyDown: false);
         event2?.flags = .maskNonCoalesced
         event2?.post(tap: .cghidEventTap)
     }
-    
+
     func checkInputAccess() {
         if #available(macOS 10.15, *) {
             // request "Input Monitoring"
@@ -324,31 +289,34 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             // request "Accessibility"
             IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
         }
-        
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
-        let accessEnabled = AXIsProcessTrustedWithOptions(options)
-        
-        if !accessEnabled {
-            print("Access Not Enabled")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
+            let accessEnabled = AXIsProcessTrustedWithOptions(options)
+
+            if !accessEnabled {
+                print("No access")
+                self.checkInputAccess()
+            }
         }
     }
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         updateActivationPolicy()
-        
+
         checkInputAccess()
         createStatusBarButton()
-        
+
         NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
     }
-    
+
     func createStatusBarButton () {
         statusBarItem = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength))
         if let button = statusBarItem.button {
             // Set menubar icon
-            button.image = NSImage(systemSymbolName: "keyboard.fill", accessibilityDescription: "Software Chording Keyboard Preferences")
+            button.image = NSImage(systemSymbolName: "keyboard.fill", accessibilityDescription: "\(getTargetName()) Preferences")
             // Re-arrange status bar icon position
             button.imagePosition = NSControl.ImagePosition.imageOnly
             // Set font
@@ -360,20 +328,20 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
     }
-    
+
     @objc func statusBarButtonPress(_ sender: AnyObject?) {
         openMenu()
     }
-    
+
     @objc func showSettingsWindow () {
         windowsOpen += 1
         updateActivationPolicy()
-        
+
         settingsUI = SettingsView(appModel: appModel)
         if(settingsWindow == nil) {
             settingsWindow = NSWindow(contentRect: NSMakeRect(0, 0, 300, 500), styleMask: [.closable, .titled, .resizable], backing: .buffered, defer: false)
         }
-        
+
         if let window = settingsWindow {
             window.isReleasedWhenClosed = false
             window.contentView?.wantsLayer = true
@@ -388,41 +356,41 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             window.center()
         }
     }
-    
+
     @objc func openMenu() {
         let versionNsObject: AnyObject? = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as AnyObject
         let version = versionNsObject as! String
         let menu = NSMenu()
-        //        menu.addItem(withTitle: "About Software Chording Keyboard", action: #selector(openAbout), keyEquivalent: "")
+        //        menu.addItem(withTitle: "About \(getTargetName())", action: #selector(openAbout), keyEquivalent: "")
         menu.addItem(withTitle: "Preferences", action: #selector(showSettingsWindow), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Send me feedback", action: #selector(openFeedback), keyEquivalent: "")
         menu.addItem(withTitle: "Buy me a coffee", action: #selector(openCoffee), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Software Chording Keyboard \(version)", action: nil, keyEquivalent: ""))
-        menu.addItem(withTitle: "Quit Software Chording Keyboard", action: #selector(quit), keyEquivalent: "q")
-        
+        menu.addItem(NSMenuItem(title: "\(getTargetName()) \(version)", action: nil, keyEquivalent: ""))
+        menu.addItem(withTitle: "Quit \(getTargetName())", action: #selector(quit), keyEquivalent: "q")
+
         statusBarItem.menu = menu
         statusBarItem.button?.performClick(nil)
         statusBarItem.menu = nil
     }
-    
+
     @objc func openFeedback() {
         if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
     @objc func openCoffee() {
         if let url = URL(string: "https://www.georgegillams.co.uk/coffee") {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
     @objc func quit() {
         NSApp.terminate(self)
     }
-    
+
     func windowWillClose(_ notification: Notification) {
         windowsOpen -= 1
         updateActivationPolicy()
@@ -431,7 +399,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             settingsUI = nil
         }
     }
-    
+
     func updateActivationPolicy() {
         if (windowsOpen > 0) {
             NSApp.setActivationPolicy(.regular)
@@ -439,13 +407,17 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             NSApp.setActivationPolicy(.prohibited)
         }
     }
-    
+
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
         appModel.appSettings.closeSettingsFileAccess()
     }
-    
+
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         return true
+    }
+
+    func getTargetName() -> String {
+        return Bundle.main.infoDictionary?["CFBundleName"] as? String ?? ""
     }
 }
