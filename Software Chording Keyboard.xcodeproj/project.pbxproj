@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		081B0B0929E431550052A0BD /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081B0B0829E431550052A0BD /* Constants.swift */; };
+		086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086E69CB2DA5B2D200B360A1 /* AppSettings.swift */; };
 		0898B41B2BE16DBA0087D747 /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 0898B41A2BE16DBA0087D747 /* LaunchAtLogin */; };
 		08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19EF129DE19F80081AB4E /* AppDelegate.swift */; };
 		08E19EF429DE19F80081AB4E /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19EF329DE19F80081AB4E /* ViewController.swift */; };
@@ -16,7 +17,6 @@
 		08E19F0429DE19F90081AB4E /* Software_Chording_KeyboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F0329DE19F90081AB4E /* Software_Chording_KeyboardTests.swift */; };
 		08E19F0E29DE19F90081AB4E /* Software_Chording_KeyboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F0D29DE19F90081AB4E /* Software_Chording_KeyboardUITests.swift */; };
 		08E19F1029DE19F90081AB4E /* Software_Chording_KeyboardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F0F29DE19F90081AB4E /* Software_Chording_KeyboardUITestsLaunchTests.swift */; };
-		08E19F1F29DE1A820081AB4E /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F1E29DE1A820081AB4E /* AppSettings.swift */; };
 		08E19F2129DE1A950081AB4E /* Chord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2029DE1A950081AB4E /* Chord.swift */; };
 		08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2329DE1CAD0081AB4E /* Settings.swift */; };
 		08E19F2629DECCAA0081AB4E /* About.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2529DECCAA0081AB4E /* About.swift */; };
@@ -43,6 +43,7 @@
 
 /* Begin PBXFileReference section */
 		081B0B0829E431550052A0BD /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		086E69CB2DA5B2D200B360A1 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		08E19EEE29DE19F80081AB4E /* Software Chording Keyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Software Chording Keyboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		08E19EF129DE19F80081AB4E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		08E19EF329DE19F80081AB4E /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -54,7 +55,6 @@
 		08E19F0929DE19F90081AB4E /* Software Chording KeyboardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Software Chording KeyboardUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		08E19F0D29DE19F90081AB4E /* Software_Chording_KeyboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Software_Chording_KeyboardUITests.swift; sourceTree = "<group>"; };
 		08E19F0F29DE19F90081AB4E /* Software_Chording_KeyboardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Software_Chording_KeyboardUITestsLaunchTests.swift; sourceTree = "<group>"; };
-		08E19F1E29DE1A820081AB4E /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = SOURCE_ROOT; };
 		08E19F2029DE1A950081AB4E /* Chord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chord.swift; sourceTree = "<group>"; };
 		08E19F2329DE1CAD0081AB4E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		08E19F2529DECCAA0081AB4E /* About.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = About.swift; sourceTree = "<group>"; };
@@ -159,7 +159,7 @@
 		08E19F1D29DE1A760081AB4E /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				08E19F1E29DE1A820081AB4E /* AppSettings.swift */,
+				086E69CB2DA5B2D200B360A1 /* AppSettings.swift */,
 				08E19F2029DE1A950081AB4E /* Chord.swift */,
 				08E19F2729DF11FC0081AB4E /* AppModel.swift */,
 				08EE66FF29E9584000F4A6E5 /* BookMarks.swift */,
@@ -318,8 +318,8 @@
 				08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */,
 				08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */,
 				08E19F2129DE1A950081AB4E /* Chord.swift in Sources */,
-				08E19F1F29DE1A820081AB4E /* AppSettings.swift in Sources */,
 				08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */,
+				086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */,
 				081B0B0929E431550052A0BD /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

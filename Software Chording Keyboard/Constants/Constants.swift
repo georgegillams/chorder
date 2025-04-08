@@ -31,4 +31,5 @@ class KeyboardConstants {
     static let fullStopKeyCode = CGKeyCode(returnEventKey)
     static let shiftEventKey = 52
     static let shiftKeyCode = CGKeyCode(shiftEventKey)
+    static let skipPreceedingSpaceCharacters = ["!", "@", "%", "*", ")", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", "."]
 }
