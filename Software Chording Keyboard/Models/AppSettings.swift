@@ -44,7 +44,7 @@ class AppSettings {
         millisecondsToHold = 100
 
         settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
-        print("User defaults settingsFileDirectory: \(settingsFileDirectory)")
+        gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
         bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
         readAppSettingsFromFile()
         initComplete = true
@@ -90,7 +90,7 @@ class AppSettings {
             chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
             recalculateAlphabeticalMapping()
         } catch {
-            print("Error deserialising data \(error)")
+            gDebugPrint("Error deserialising data \(error)")
         }
     }
 
@@ -112,7 +112,7 @@ class AppSettings {
             let json = String(data: jsonData, encoding: String.Encoding.utf8) ?? ""
             return json
         } catch {
-            print("Error serialising data \(error)")
+            gDebugPrint("Error serialising data \(error)")
             return ""
         }
     }
@@ -130,7 +130,7 @@ class AppSettings {
                                  encoding: .utf8)
         }catch {
             // Handle error
-            print("ERROR \(error)")
+            gDebugPrint("ERROR \(error)")
         }
     }
 
@@ -141,10 +141,9 @@ class AppSettings {
         if (FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
             do {
                 let json = try String(contentsOf: settingsFileLocation, encoding: .utf8)
-                print("Read from file: \(json)")
                 parseSettingsFromJson(json: json)
             } catch {
-                print("ERROR \(error)")
+                gDebugPrint("ERROR \(error)")
             }
         }
 
