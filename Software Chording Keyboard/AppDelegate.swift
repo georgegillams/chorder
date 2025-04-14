@@ -31,7 +31,7 @@ import SwiftUI
  - [ ] The app can show a user their statistics.
 
  ## UI
- - [ ] The current capitalisation mode is reflected in the menu-bar icon.
+ - [x] The current capitalisation mode is reflected in the menu-bar icon.
  - [ ] Permissions issues are reflected in the menu.
  - [ ] The UI represents both single and chained chords.
  - [ ] The UI prevents adding conflicting chords.
@@ -237,6 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     // self.inputCharacters.removeAllObjects()
 
                     self.replaceCharacters(chord: chord!)
+                    chord!.incrementUsageCount()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
                     self.charactersTypedSinceSpaceOwed = 0

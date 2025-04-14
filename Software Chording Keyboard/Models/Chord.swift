@@ -12,14 +12,25 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 let maximumOutputChunkLength = 10
 
 class Chord: Identifiable {
-    var input: String
+    @Published var input: String
     var inputSorted: String
     var deleteCount: Int
-    var output: String
+    @Published var output: String
     var outputChunks: [String] = []
     var pipeNegativePosition: Int
     var hasPipe: Bool
-    var usageCount: Int? // TODO: To be set when stats are loaded from file
+
+    // TODO: To be set when stats are loaded from file
+    var usageCount: Int?{
+        didSet {
+            if(usageCount == nil)
+            {
+                usageCountPretty = "-"
+            }
+            usageCountPretty = String(usageCount ?? 0)
+        }
+    }
+    @Published var usageCountPretty: String = "-"
 
     init(input: String, output: String) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.

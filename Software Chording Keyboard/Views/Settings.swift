@@ -34,6 +34,7 @@ struct SettingsView: View {
                         Table(appModel.appSettings.chords, selection: $selectedChords) {
                             TableColumn("Input combination", value: \.input)
                             TableColumn("Output", value: \.output)
+                            TableColumn("Usage", value: \.usageCountPretty)
                         }
                         HStack(spacing:0) {
                             Button(action: {
