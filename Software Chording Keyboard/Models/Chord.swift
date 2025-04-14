@@ -12,7 +12,6 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 let maximumOutputChunkLength = 10
 
 class Chord: Identifiable {
-
     var input: String
     var inputSorted: String
     var deleteCount: Int
@@ -20,6 +19,7 @@ class Chord: Identifiable {
     var outputChunks: [String] = []
     var pipeNegativePosition: Int
     var hasPipe: Bool
+    var usageCount: Int? // TODO: To be set when stats are loaded from file
 
     init(input: String, output: String) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
@@ -36,7 +36,7 @@ class Chord: Identifiable {
 
         // check that there is only one un-escaped pipe
         if(escapedOutput.components(separatedBy: "|").count > 2) {
-            print("Error: Chord output has more than one pipe")
+            gDebugPrint("Error: Chord output has more than one pipe")
             return
         }
 
@@ -68,6 +68,14 @@ class Chord: Identifiable {
             }
         }
         return "*"
+    }
+
+    func incrementUsageCount() {
+        if(usageCount == nil) {
+            usageCount = 0
+        }
+
+        usageCount! += 1
     }
 }
 

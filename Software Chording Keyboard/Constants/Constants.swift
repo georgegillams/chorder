@@ -17,6 +17,8 @@ enum CapitalisationMode {
 class KeyboardConstants {
     static let spaceEventKey = 49
     static let spaceKeyCode = CGKeyCode(spaceEventKey)
+    static let tabEventKey = 48
+    static let tabKeyCode = CGKeyCode(tabEventKey)
     static let backspaceEventKey = 51
     static let backspaceKeyCode = CGKeyCode(backspaceEventKey)
     static let escapeEventKey = 53
@@ -31,5 +33,7 @@ class KeyboardConstants {
     static let fullStopKeyCode = CGKeyCode(returnEventKey)
     static let shiftEventKey = 52
     static let shiftKeyCode = CGKeyCode(shiftEventKey)
-    static let skipPreceedingSpaceCharacters = ["!", "@", "%", "*", ")", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", "."]
+    static let deleteEventKey = 127
+    static let deleteKeyCode = CGKeyCode(deleteEventKey)
+    static let skipPreceedingSpaceCharacters = ["!", "@", "%", "*", ")", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", ".", "&", "#"]
 }

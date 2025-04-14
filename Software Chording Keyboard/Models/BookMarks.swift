@@ -34,7 +34,7 @@ import Foundation
             data[url] = bookmark
             dump()
         } catch {
-            print("Error storing bookmarks")
+            gDebugPrint("Error storing bookmarks")
         }
     }
 
@@ -43,7 +43,7 @@ import Foundation
         do {
             try NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: true).write(to: path)
         } catch {
-            print("Error dumping bookmarks")
+            gDebugPrint("Error dumping bookmarks")
         }
     }
 
@@ -66,8 +66,8 @@ import Foundation
             }
             return bookmarks
         } catch {
-            // print(error.localizedDescription)
-            print("Error loading bookmarks")
+            // gDebugPrint(error.localizedDescription)
+            gDebugPrint("Error loading bookmarks")
             return nil
         }
     }
@@ -76,20 +76,20 @@ import Foundation
         let restoredUrl: URL?
         var isStale = false
 
-        print("Restoring \(bookmark.key)")
+        gDebugPrint("Restoring \(bookmark.key)")
         do {
             restoredUrl = try URL.init(resolvingBookmarkData: bookmark.value, options: NSURL.BookmarkResolutionOptions.withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
         } catch {
-            print("Error restoring bookmarks")
+            gDebugPrint("Error restoring bookmarks")
             restoredUrl = nil
         }
 
         if let url = restoredUrl {
             if isStale {
-                print("URL is stale")
+                gDebugPrint("URL is stale")
             } else {
                 if !url.startAccessingSecurityScopedResource() {
-                    print("Couldn't access: \(url.path)")
+                    gDebugPrint("Couldn't access: \(url.path)")
                 }
             }
         }
