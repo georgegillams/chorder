@@ -11,7 +11,7 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 
 let maximumOutputChunkLength = 10
 
-class Chord: Identifiable {
+class Chord: Identifiable, ObservableObject {
     @Published var input: String
     var inputSorted: String
     var deleteCount: Int

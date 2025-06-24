@@ -320,12 +320,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         event2?.post(tap: .cghidEventTap)
     }
 
-    func checkInputAccess() {
+    func checkInputMonitoringAccess() {
         if #available(macOS 10.15, *) {
-            // request "Input Monitoring"
             IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
-            // request "Accessibility"
-            IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -333,9 +330,32 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             let accessEnabled = AXIsProcessTrustedWithOptions(options)
 
             if !accessEnabled {
-                gDebugPrint("No access")
-                self.checkInputAccess()
+                gDebugPrint("No input monitoring access")
+                self.checkInputMonitoringAccess()
             }
+        }
+    }
+
+    func checkAccessibilityAccess() {
+        if #available(macOS 10.15, *) {
+            IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
+        } 
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
+            let accessEnabled = AXIsProcessTrustedWithOptions(options)
+
+            if !accessEnabled {
+                gDebugPrint("No accessibility access")
+                self.checkInputMonitoringAccess()
+            }
+        }
+    }
+
+    func checkInputAccess() {
+        checkInputMonitoringAccess()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            self.checkAccessibilityAccess()
         }
     }
 

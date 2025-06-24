@@ -13,7 +13,7 @@ class AppSettings {
     private var suppressWriting: Bool = false
 
     /* Raw settings */
-    private(set) public var chords: [Chord]
+    @Published private(set) public var chords: [Chord]
     @Published public var millisecondsToHoldStr: String {
         didSet {
             millisecondsToHold = Double(millisecondsToHoldStr.replacingOccurrences(of: "ms", with: "")) ?? millisecondsToHold
