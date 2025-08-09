@@ -62,7 +62,7 @@ class Chord: Identifiable, ObservableObject {
             self.pipeNegativePosition -= 1
         }
     }
-
+ 
     func findSpecialCharNotInString (str: String) -> String {
         for char in SPECIAL_CHARS {
             if(!str.contains(String(char))) {

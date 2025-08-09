@@ -77,9 +77,9 @@ class AppSettings {
     func deserialiseChords(serialisableChords: [[String: String]]) -> [Chord] {
         var chords: [Chord] = []
         for serialisableChord in serialisableChords {
-            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? "", 
-                usageCount: Int(serialisableChord["usageCount"] ?? "0")
-            ))
+            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? "",
+                                usageCount: Int(serialisableChord["usageCount"] ?? "0")
+                               ))
         }
         return chords
     }
@@ -205,13 +205,13 @@ class AppSettings {
         isDirty = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
             if(self.isDirty && self.initComplete && !self.suppressWriting) {
-        debugPrint("*** Writing dirty settings to file")
+                debugPrint("*** Writing dirty settings to file")
                 self.writeAppSettingsToFile()
                 self.clearDirty()
             }
         }
     }
-
+ 
     private func clearDirty() {
         isDirty = false
     }
