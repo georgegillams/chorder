@@ -16,24 +16,80 @@ struct SettingsView: View {
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
     @State private var isChecked = false
-    
-    
+    @State private var showFilterInput = false
+    @State private var filterString = ""
+
+
     init(appModel: AppModel) {
         self.appModel = appModel
     }
-    
+
+    var filteredChords: [Chord] {
+        if filterString.isEmpty {
+            return appModel.appSettings.chords
+        }
+
+        let filterText = filterString.lowercased()
+        return appModel.appSettings.chords.filter { chord in
+            // Check if output contains the filter text
+            let outputMatches = chord.output.lowercased().contains(filterText)
+
+            // Check if input (sorted alphabetically) matches the filter (sorted alphabetically)
+            let sortedInput = String(chord.input.lowercased().sorted())
+            let sortedFilter = String(filterText.sorted())
+            let inputMatches = sortedInput.contains(sortedFilter)
+
+            return outputMatches || inputMatches
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {
                 // TODO: Statistics
-                
+
                 // Chords
                 VStack(alignment: .leading) {
-                    Text("Chords").font(.headline)
+                    // Title and Filter UI on same line
+                    HStack {
+                        Text("Chords").font(.headline)
+
+                        Spacer()
+
+                        if showFilterInput {
+                            TextField("Filter chords...", text: $filterString)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 200)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+
+
+                        // We can add esc and cmd+f keyboard shortcuts to toggle the filter input
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showFilterInput.toggle()
+                                if !showFilterInput {
+                                    filterString = ""
+                                }
+                            }
+                        }) {
+                            Image(systemName: showFilterInput ? "xmark.circle" : "line.3.horizontal.decrease.circle")
+                                .foregroundColor(showFilterInput ? .accentColor : .secondary)
+                        }.padding(.leading, 4)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("filter")
+                            .help("Filter chords")
+                    }
+                    .frame(minHeight: 22)
+                    .padding(.bottom, 4)
+
                     VStack(alignment: .leading, spacing: 0) {
-                        Table(appModel.appSettings.chords, selection: $selectedChords) {
+                        Table(filteredChords, selection: $selectedChords) {
                             TableColumn("Input combination", value: \.input)
                             TableColumn("Output", value: \.output)
+                            TableColumn("Usage") { chord in
+                                Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
+                            }
                         }
                         HStack(spacing:0) {
                             Button(action: {
@@ -50,9 +106,10 @@ struct SettingsView: View {
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
                     }.cornerRadius(8)
+                    Text("Note: Usage counts may not update until preferences are closed and re-opened, due to a rendering bug.").font(.caption).foregroundColor(.secondary).padding(.bottom, 4)
                     Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
                 }
-                
+
                 // Input
                 VStack(alignment: .leading) {
                     Text("Input").font(.headline)
@@ -65,7 +122,7 @@ struct SettingsView: View {
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
                     }
                 }
-                
+
                 // Configuration
                 VStack(alignment: .leading) {
                     Text("Configuration").font(.headline)
@@ -82,19 +139,37 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Settings backup location")
-                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they’re never lost!").font(.caption).foregroundColor(.secondary)
+                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they're never lost!").font(.caption).foregroundColor(.secondary)
+
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         Spacer()
                         Button(action: {
                             delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
                         }) {
-                            Text("Choose backup location").font(Font.caption)
+                            Text(appModel.appSettings.settingsFileDirectory != nil ? "Change backup location" : "Choose backup location").font(Font.caption)
                         }
+
+                    }
+                    if let backupLocation = appModel.appSettings.settingsFileDirectory {
+                        Button(action: {
+                            let settingsFilePath = appModel.appSettings.settingsFileLocation.path
+                            let directoryPath = appModel.appSettings.settingsFileDirectory!.path
+                            NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directoryPath)
+                        }) {
+                            Text("Current location: \(backupLocation.path)")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .buttonStyle(.plain)
+
                     }
                 }
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
-            
-            // Create
+
+            // Create 
             if(creatingChord) {
                 VStack(alignment: .leading) {
                     Text("New chord").font(.headline).padding(.bottom,8)
@@ -126,6 +201,7 @@ struct SettingsView: View {
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
         }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
+
     }
 }
 

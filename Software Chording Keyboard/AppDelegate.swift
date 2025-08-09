@@ -31,7 +31,7 @@ import SwiftUI
  - [ ] The app can show a user their statistics.
 
  ## UI
- - [ ] The current capitalisation mode is reflected in the menu-bar icon.
+ - [x] The current capitalisation mode is reflected in the menu-bar icon.
  - [ ] Permissions issues are reflected in the menu.
  - [ ] The UI represents both single and chained chords.
  - [ ] The UI prevents adding conflicting chords.
@@ -237,6 +237,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     // self.inputCharacters.removeAllObjects()
 
                     self.replaceCharacters(chord: chord!)
+                    chord!.incrementUsageCount()
+                    self.appModel.appSettings.setDirty()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
                     self.charactersTypedSinceSpaceOwed = 0
@@ -319,12 +321,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         event2?.post(tap: .cghidEventTap)
     }
 
-    func checkInputAccess() {
+    func checkInputMonitoringAccess() {
         if #available(macOS 10.15, *) {
-            // request "Input Monitoring"
             IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
-            // request "Accessibility"
-            IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -332,9 +331,32 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             let accessEnabled = AXIsProcessTrustedWithOptions(options)
 
             if !accessEnabled {
-                gDebugPrint("No access")
-                self.checkInputAccess()
+                gDebugPrint("No input monitoring access")
+                self.checkInputMonitoringAccess()
             }
+        }
+    }
+
+    func checkAccessibilityAccess() {
+        if #available(macOS 10.15, *) {
+            IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
+        } 
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
+            let accessEnabled = AXIsProcessTrustedWithOptions(options)
+
+            if !accessEnabled {
+                gDebugPrint("No accessibility access")
+                self.checkInputMonitoringAccess()
+            }
+        }
+    }
+
+    func checkInputAccess() {
+        checkInputMonitoringAccess()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            self.checkAccessibilityAccess()
         }
     }
 

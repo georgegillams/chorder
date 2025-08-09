@@ -11,20 +11,22 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 
 let maximumOutputChunkLength = 10
 
-class Chord: Identifiable {
-    var input: String
+class Chord: Identifiable, ObservableObject {
+    @Published var input: String
     var inputSorted: String
     var deleteCount: Int
-    var output: String
+    @Published var output: String
     var outputChunks: [String] = []
     var pipeNegativePosition: Int
     var hasPipe: Bool
-    var usageCount: Int? // TODO: To be set when stats are loaded from file
 
-    init(input: String, output: String) {
+    @Published var usageCount: Int?
+
+    init(input: String, output: String, usageCount: Int? = nil) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
         self.output = output
+        self.usageCount = usageCount
         self.deleteCount = 0
         self.pipeNegativePosition = 0
         self.hasPipe = false
@@ -60,7 +62,7 @@ class Chord: Identifiable {
             self.pipeNegativePosition -= 1
         }
     }
-
+ 
     func findSpecialCharNotInString (str: String) -> String {
         for char in SPECIAL_CHARS {
             if(!str.contains(String(char))) {
