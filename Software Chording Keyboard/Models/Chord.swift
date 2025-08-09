@@ -22,6 +22,11 @@ class Chord: Identifiable, ObservableObject {
 
     @Published var usageCount: Int?
 
+    // Computed property for sorting
+    var usageCountForSorting: Int {
+        return usageCount ?? 0
+    }
+
     init(input: String, output: String, usageCount: Int? = nil) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
@@ -61,8 +66,8 @@ class Chord: Identifiable, ObservableObject {
             // subtract one from the pipe position, as the pipe won't be output so we don't need to go back an extra time for the pipe.
             self.pipeNegativePosition -= 1
         }
-    }
- 
+    } 
+
     func findSpecialCharNotInString (str: String) -> String {
         for char in SPECIAL_CHARS {
             if(!str.contains(String(char))) {

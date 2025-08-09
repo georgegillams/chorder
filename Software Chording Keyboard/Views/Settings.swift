@@ -18,29 +18,44 @@ struct SettingsView: View {
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
+    @State private var sortOrder: [KeyPathComparator<Chord>] = []
+    @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
 
 
     init(appModel: AppModel) {
         self.appModel = appModel
     }
 
+    // Computed property to check if custom sorting is active
+    private var hasCustomSorting: Bool {
+        return !sortOrder.isEmpty
+    }
+
     var filteredChords: [Chord] {
-        if filterString.isEmpty {
-            return appModel.appSettings.chords
+        var chords = appModel.appSettings.chords
+
+        // Apply filtering
+        if !filterString.isEmpty {
+            let filterText = filterString.lowercased()
+            chords = chords.filter { chord in
+                // Check if output contains the filter text
+                let outputMatches = chord.output.lowercased().contains(filterText)
+
+                // Check if input (sorted alphabetically) matches the filter (sorted alphabetically)
+                let sortedInput = String(chord.input.lowercased().sorted())
+                let sortedFilter = String(filterText.sorted())
+                let inputMatches = sortedInput.contains(sortedFilter)
+
+                return outputMatches || inputMatches
+            }
         }
 
-        let filterText = filterString.lowercased()
-        return appModel.appSettings.chords.filter { chord in
-            // Check if output contains the filter text
-            let outputMatches = chord.output.lowercased().contains(filterText)
-
-            // Check if input (sorted alphabetically) matches the filter (sorted alphabetically)
-            let sortedInput = String(chord.input.lowercased().sorted())
-            let sortedFilter = String(filterText.sorted())
-            let inputMatches = sortedInput.contains(sortedFilter)
-
-            return outputMatches || inputMatches
+        // Apply sorting based on sortOrder
+        if !sortOrder.isEmpty {
+            chords.sort(using: sortOrder)
         }
+
+        return chords
     }
 
     var body: some View {
@@ -79,17 +94,54 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                             .accessibilityLabel("filter")
                             .help("Filter chords")
+
+                        // Reset sorting button - shown when custom sorting is active
+                        if hasCustomSorting {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    sortOrder = []
+                                    previousSortOrder = []
+                                }
+                            }) {
+                                Text("Reset sorting")
+                                    .font(.caption)
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Reset table sorting")
+                            .padding(.leading, 4)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
                     }
                     .frame(minHeight: 22)
                     .padding(.bottom, 4)
 
+
+
                     VStack(alignment: .leading, spacing: 0) {
-                        Table(filteredChords, selection: $selectedChords) {
+                        Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
                             TableColumn("Input combination", value: \.input)
                             TableColumn("Output", value: \.output)
-                            TableColumn("Usage") { chord in
+                            TableColumn("Usage", value: \.usageCountForSorting) { chord in
                                 Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
                             }
+                        }
+                        .onChange(of: sortOrder) { newSortOrder in
+                            // Handle special case: first click on Usage should cause sorting in descending (high to low) order
+                            if let newComparator = newSortOrder.first,
+                               newComparator.keyPath == \Chord.usageCountForSorting,
+                               newComparator.order == .forward {
+                                // Check if we're switching from no sort or different column to Usage
+                                let wasUsageSorted = previousSortOrder.first?.keyPath == \Chord.usageCountForSorting
+                                if !wasUsageSorted {
+                                    // Override to descending for first Usage click
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        sortOrder = [KeyPathComparator(\Chord.usageCountForSorting, order: .reverse)]
+                                    }
+                                }
+                            }
+                            // Update previous sort order for next time
+                            previousSortOrder = newSortOrder
                         }
                         HStack(spacing:0) {
                             Button(action: {
@@ -172,7 +224,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading) {
                     Text("Permissions").font(.headline)
                     Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.").font(.caption).foregroundColor(.secondary).padding(.bottom, 8)
-                    
+
                     // Input Monitoring
                     HStack {
                         HStack {
@@ -189,12 +241,12 @@ struct SettingsView: View {
                             }
                         }
                         Button(action: {
-                                delegate.openInputMonitoringSettings()
+                            delegate.openInputMonitoringSettings()
                         }) {
                             Text("Open settings").font(Font.caption)
                         }
                     }.padding(.bottom, 8)
-                    
+
                     // Accessibility
                     HStack {
                         HStack {
@@ -210,16 +262,16 @@ struct SettingsView: View {
                                 Text("Grant permission").font(Font.caption)
                             }
                         }
-                            Button(action: {
-                                delegate.openAccessibilitySettings()
-                            }) {
-                                Text("Open settings").font(Font.caption)
-                            }
+                        Button(action: {
+                            delegate.openAccessibilitySettings()
+                        }) {
+                            Text("Open settings").font(Font.caption)
+                        }
                     }
                 }
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
 
-            // Create 
+            // Create
             if(creatingChord) {
                 VStack(alignment: .leading) {
                     Text("New chord").font(.headline).padding(.bottom,8)
@@ -243,7 +295,7 @@ struct SettingsView: View {
                             creatingChord = false
                             appModel.appSettings.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
                             newChordInput = ""
-                            newChordOutput = ""
+                            newChordOutput = "" 
                         }) {
                             Text("Save").font(Font.caption)
                         }
