@@ -321,42 +321,72 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         event2?.post(tap: .cghidEventTap)
     }
 
-    func checkInputMonitoringAccess() {
+    // MARK: - Permission Checking Methods
+
+    public func hasInputMonitoringPermission() -> Bool {
+        if #available(macOS 10.15, *) {
+            return IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        }
+        return true // Assume granted on older macOS versions
+    }
+
+    func requestInputMonitoringPermission() {
         if #available(macOS 10.15, *) {
             IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
         }
+    }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
-            let accessEnabled = AXIsProcessTrustedWithOptions(options)
+    public func hasAccessibilityPermission() -> Bool {
+        return AXIsProcessTrustedWithOptions(nil)
+    }
 
-            if !accessEnabled {
-                gDebugPrint("No input monitoring access")
-                self.checkInputMonitoringAccess()
-            }
+    func requestAccessibilityPermission() {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
+        _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    public func openInputMonitoringSettings() {
+        if #available(macOS 13.0, *) {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
+        } else {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_InputMonitoring")!)
         }
     }
 
-    func checkAccessibilityAccess() {
-        if #available(macOS 10.15, *) {
-            IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
-        } 
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
-            let accessEnabled = AXIsProcessTrustedWithOptions(options)
-
-            if !accessEnabled {
-                gDebugPrint("No accessibility access")
-                self.checkInputMonitoringAccess()
-            }
-        }
+    public func openAccessibilitySettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
+
+    // MARK: - Main Permission Flow
 
     func checkInputAccess() {
-        checkInputMonitoringAccess()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-            self.checkAccessibilityAccess()
+        let hasInputMonitoringPermission = hasInputMonitoringPermission()
+        gDebugPrint("Input monitoring access: \(hasInputMonitoringPermission)")
+
+        if(!hasInputMonitoringPermission) {
+            requestInputMonitoringPermission()
+            //  Wait for permissions to change and re-check
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                self.checkInputAccess()
+            }
+
+            // Return so that we only check one permission at a time
+            return
+        }
+
+
+        let hasAccessibilityPermission = hasAccessibilityPermission()
+        gDebugPrint("Accessibility access: \(hasAccessibilityPermission)")
+
+        if(!hasAccessibilityPermission) {
+            requestAccessibilityPermission()
+            //  Wait for permissions to change and re-check
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                self.checkInputAccess()
+            }
+
+            // Return so that we only check one permission at a time
+            return
         }
     }
 
@@ -489,7 +519,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             NSWorkspace.shared.open(url)
         }
     }
-
+     
     @objc func quit() {
         NSApp.terminate(self)
     }

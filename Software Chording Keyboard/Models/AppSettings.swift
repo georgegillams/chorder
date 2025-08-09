@@ -187,7 +187,7 @@ class AppSettings {
                 } else {
                     writeAppSettingsToFile()
                 }
-            }
+            } 
         } else {
             // User clicked on "Cancel"
             return
@@ -211,7 +211,7 @@ class AppSettings {
             }
         }
     }
- 
+
     private func clearDirty() {
         isDirty = false
     }
