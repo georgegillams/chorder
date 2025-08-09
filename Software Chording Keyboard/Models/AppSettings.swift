@@ -120,6 +120,8 @@ class AppSettings {
         }
     }
 
+    // TODO: Would be nice if this first re-reads usage numbers, and only overwrites if greater than existing value.
+    // TODO: That way, across multiple devices, usage won't get lost.
     func writeAppSettingsToFile() {
         if(!initComplete || suppressWriting) {
             return
