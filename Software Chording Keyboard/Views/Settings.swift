@@ -53,6 +53,7 @@ struct SettingsView: View {
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
                     }.cornerRadius(8)
+                        Text("Note: Usage counts may not update until preferences are closed and re-opened, due to a rendering bug.").font(.caption).foregroundColor(.secondary).padding(.bottom, 4)
                     Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
                 }
 
