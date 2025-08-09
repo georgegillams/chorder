@@ -16,8 +16,13 @@ For example, if you press `t` and `h` together, it will detect the chord `th` wh
 
 If you have issues with permissions when developing, try the following.
 
+1. Ensure app-sandbox is disabled for development
 1. Delete the installed production app
 1. Remove it from bin too
 1. Remove the app from privacy settings — both accessibility and input monitoring
 1. Clean the Xcode build folder (Product > Clean Build Folder)
 1. Rebuild and re-accept permissions
+
+## Release
+
+Before releasing, re-enable app-sandbox.

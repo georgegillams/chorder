@@ -167,6 +167,56 @@ struct SettingsView: View {
 
                     }
                 }
+
+                // Permissions
+                VStack(alignment: .leading) {
+                    Text("Permissions").font(.headline)
+                    Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.").font(.caption).foregroundColor(.secondary).padding(.bottom, 8)
+                    
+                    // Input Monitoring
+                    HStack {
+                        HStack {
+                            Text("Input monitoring")
+                            Text(delegate.hasInputMonitoringPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasInputMonitoringPermission() ? .green : .red)
+                        }
+                        Spacer()
+                        if !delegate.hasInputMonitoringPermission() {
+                            Button(action: {
+                                delegate.requestInputMonitoringPermission()
+                                delegate.openInputMonitoringSettings()
+                            }) {
+                                Text("Grant permission").font(Font.caption)
+                            }
+                        }
+                        Button(action: {
+                                delegate.openInputMonitoringSettings()
+                        }) {
+                            Text("Open settings").font(Font.caption)
+                        }
+                    }.padding(.bottom, 8)
+                    
+                    // Accessibility
+                    HStack {
+                        HStack {
+                            Text("Accessibility")
+                            Text(delegate.hasAccessibilityPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasAccessibilityPermission() ? .green : .red)
+                        }
+                        Spacer()
+                        if !delegate.hasAccessibilityPermission() {
+                            Button(action: {
+                                delegate.requestAccessibilityPermission()
+                                delegate.openAccessibilitySettings()
+                            }) {
+                                Text("Grant permission").font(Font.caption)
+                            }
+                        }
+                            Button(action: {
+                                delegate.openAccessibilitySettings()
+                            }) {
+                                Text("Open settings").font(Font.caption)
+                            }
+                    }
+                }
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
 
             // Create 
@@ -200,7 +250,7 @@ struct SettingsView: View {
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
-        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
+        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
 
     }
 }
