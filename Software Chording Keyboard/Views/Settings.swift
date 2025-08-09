@@ -16,17 +16,17 @@ struct SettingsView: View {
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
     @State private var isChecked = false
-    
-    
+
+
     init(appModel: AppModel) {
         self.appModel = appModel
     }
-    
+
     var body: some View {
         ZStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 40) {
                 // TODO: Statistics
-                
+
                 // Chords
                 VStack(alignment: .leading) {
                     Text("Chords").font(.headline)
@@ -53,7 +53,7 @@ struct SettingsView: View {
                     }.cornerRadius(8)
                     Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
                 }
-                
+
                 // Input
                 VStack(alignment: .leading) {
                     Text("Input").font(.headline)
@@ -66,7 +66,7 @@ struct SettingsView: View {
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
                     }
                 }
-                
+
                 // Configuration
                 VStack(alignment: .leading) {
                     Text("Configuration").font(.headline)
@@ -83,18 +83,36 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Settings backup location")
-                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they’re never lost!").font(.caption).foregroundColor(.secondary)
+                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they're never lost!").font(.caption).foregroundColor(.secondary)
+
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         Spacer()
                         Button(action: {
                             delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
                         }) {
-                            Text("Choose backup location").font(Font.caption)
+                            Text(appModel.appSettings.settingsFileDirectory != nil ? "Change backup location" : "Choose backup location").font(Font.caption)
                         }
+
+                    }
+                    if let backupLocation = appModel.appSettings.settingsFileDirectory {
+                        Button(action: {
+                            let settingsFilePath = appModel.appSettings.settingsFileLocation.path
+                            let directoryPath = appModel.appSettings.settingsFileDirectory!.path
+                            NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directoryPath)
+                        }) {
+                            Text("Current location: \(backupLocation.path)")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .buttonStyle(.plain)
+
                     }
                 }
             }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
-            
+
             // Create
             if(creatingChord) {
                 VStack(alignment: .leading) {
@@ -128,7 +146,7 @@ struct SettingsView: View {
             }
         }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
     }
-}
+} 
 
 struct Settings_Previews: PreviewProvider {
     static var previews: some View {
