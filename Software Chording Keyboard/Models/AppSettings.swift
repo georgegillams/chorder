@@ -11,6 +11,7 @@ import SwiftUI
 class AppSettings {
     private var initComplete: Bool = false
     private var suppressWriting: Bool = false
+    @Published private(set) public var isDirty: Bool = false
 
     /* Raw settings */
     @Published private(set) public var chords: [Chord]
@@ -76,7 +77,9 @@ class AppSettings {
     func deserialiseChords(serialisableChords: [[String: String]]) -> [Chord] {
         var chords: [Chord] = []
         for serialisableChord in serialisableChords {
-            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? ""))
+            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? "", 
+                usageCount: Int(serialisableChord["usageCount"] ?? "0")
+            ))
         }
         return chords
     }
@@ -97,7 +100,7 @@ class AppSettings {
     func serialiseChords(chords: [Chord]) -> [[String: String]] {
         var serialisableChords: [[String: String]] = []
         for chord in chords {
-            serialisableChords.append(["input": chord.input, "output": chord.output])
+            serialisableChords.append(["input": chord.input, "output": chord.output, "usageCount": String(chord.usageCount ?? 0)])
         }
         return serialisableChords
     }
@@ -128,6 +131,7 @@ class AppSettings {
             try jsonString.write(to: settingsFileLocation,
                                  atomically: true,
                                  encoding: .utf8)
+            clearDirty()
         }catch {
             // Handle error
             gDebugPrint("ERROR \(error)")
@@ -150,6 +154,7 @@ class AppSettings {
         recalculateAppSettings()
 
         suppressWriting = false
+        clearDirty()
     }
 
     func chooseBackupSettingsFileLocation() {
@@ -193,6 +198,22 @@ class AppSettings {
         settingsFileDirectory = newLocation
         UserDefaults.standard.set(newLocation, forKey: "settingsFileDirectory")
         bookmarks.store(url: newLocation)
+    }
+
+    public func setDirty() {
+        debugPrint("*** Settings dirty")
+        isDirty = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            if(self.isDirty && self.initComplete && !self.suppressWriting) {
+        debugPrint("*** Writing dirty settings to file")
+                self.writeAppSettingsToFile()
+                self.clearDirty()
+            }
+        }
+    }
+
+    private func clearDirty() {
+        isDirty = false
     }
 
     public func closeSettingsFileAccess() {

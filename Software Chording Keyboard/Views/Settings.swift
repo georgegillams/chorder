@@ -34,7 +34,9 @@ struct SettingsView: View {
                         Table(appModel.appSettings.chords, selection: $selectedChords) {
                             TableColumn("Input combination", value: \.input)
                             TableColumn("Output", value: \.output)
-                            TableColumn("Usage", value: \.usageCountPretty)
+                            TableColumn("Usage") { chord in
+                                Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
+                            }
                         }
                         HStack(spacing:0) {
                             Button(action: {
@@ -145,6 +147,7 @@ struct SettingsView: View {
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
         }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity, alignment: .center)
+   
     }
 } 
 

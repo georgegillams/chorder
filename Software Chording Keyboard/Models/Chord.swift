@@ -20,22 +20,13 @@ class Chord: Identifiable, ObservableObject {
     var pipeNegativePosition: Int
     var hasPipe: Bool
 
-    // TODO: To be set when stats are loaded from file
-    var usageCount: Int?{
-        didSet {
-            if(usageCount == nil)
-            {
-                usageCountPretty = "-"
-            }
-            usageCountPretty = String(usageCount ?? 0)
-        }
-    }
-    @Published var usageCountPretty: String = "-"
+    @Published var usageCount: Int?
 
-    init(input: String, output: String) {
+    init(input: String, output: String, usageCount: Int? = nil) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
         self.output = output
+        self.usageCount = usageCount
         self.deleteCount = 0
         self.pipeNegativePosition = 0
         self.hasPipe = false
