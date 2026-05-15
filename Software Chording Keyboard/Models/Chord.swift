@@ -32,41 +32,64 @@ class Chord: Identifiable, ObservableObject {
         self.input = input
         self.output = output
         self.usageCount = usageCount
-        self.deleteCount = 0
         self.pipeNegativePosition = 0
         self.hasPipe = false
         self.inputSorted = String(input.sorted())
 
-        // replace escaped pipes with a placeholder
-        let escapedPipePlaceholder = findSpecialCharNotInString(str: output)
-        let escapedOutput = output.replacingOccurrences(of: "\\|", with: escapedPipePlaceholder)
-
-        // check that there is only one un-escaped pipe
-        if(escapedOutput.components(separatedBy: "|").count > 2) {
+        let decomposed = Self.decomposedOutput(for: output)
+        if decomposed.invalid {
             gDebugPrint("Error: Chord output has more than one pipe")
+            self.deleteCount = input.count
             return
         }
 
-        // find unescaped pipe position in output string
-        let pipeIndex = escapedOutput.firstIndex(of: "|") ?? escapedOutput.endIndex
-        let pipePosition = escapedOutput.distance(from: escapedOutput.startIndex, to: pipeIndex)
-
-        // remove pipes from output string
-        let outputWithoutPipes = escapedOutput.replacingOccurrences(of: "|", with: "")
-
-        // return pipe placeholders
-        let outputWithPipes = outputWithoutPipes.replacingOccurrences(of: escapedPipePlaceholder, with: "|")
+        let outputWithPipes = decomposed.beforeCursor + decomposed.afterCursor
 
         self.deleteCount = input.count
         self.outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
-        self.pipeNegativePosition = escapedOutput.count - pipePosition
-        self.hasPipe = escapedOutput.contains("|")
+        self.pipeNegativePosition = decomposed.hasPipe ? decomposed.afterCursor.count : 0
+        self.hasPipe = decomposed.hasPipe
+    }
 
-        if(self.pipeNegativePosition > 0) {
-            // subtract one from the pipe position, as the pipe won't be output so we don't need to go back an extra time for the pipe.
-            self.pipeNegativePosition -= 1
+    /// Splits raw chord output into typed segments before and after the cursor pipe (`\|` is a literal pipe).
+    static func decomposedOutput(for rawOutput: String) -> (beforeCursor: String, afterCursor: String, hasPipe: Bool, invalid: Bool) {
+        let escapedPipePlaceholder = Self.placeholderCharacterAvoidingCollision(with: rawOutput)
+        let escapedOutput = rawOutput.replacingOccurrences(of: "\\|", with: escapedPipePlaceholder)
+
+        if escapedOutput.components(separatedBy: "|").count > 2 {
+            return ("", "", false, true)
         }
-    } 
+
+        guard let pipeIndex = escapedOutput.firstIndex(of: "|") else {
+            let typed = escapedOutput.replacingOccurrences(of: escapedPipePlaceholder, with: "|")
+            return (typed, "", false, false)
+        }
+
+        let before = String(escapedOutput[..<pipeIndex]).replacingOccurrences(of: escapedPipePlaceholder, with: "|")
+        let after = String(escapedOutput[escapedOutput.index(after: pipeIndex)...]).replacingOccurrences(of: escapedPipePlaceholder, with: "|")
+        return (before, after, true, false)
+    }
+
+    /// Text to type and how many left-arrow presses follow, after expanding `{{date}}` tokens at fire time.
+    func resolvedTypingSegments(referenceDate: Date = Date()) -> (segments: [String], leftArrowCount: Int) {
+        let decomposed = Self.decomposedOutput(for: output)
+        if decomposed.invalid {
+            return (outputChunks, pipeNegativePosition)
+        }
+        let before = OutputPlaceholderExpansion.expand(decomposed.beforeCursor, referenceDate: referenceDate)
+        let after = OutputPlaceholderExpansion.expand(decomposed.afterCursor, referenceDate: referenceDate)
+        let merged = before + after
+        return (merged.chunked(into: maximumOutputChunkLength), after.count)
+    }
+
+    private static func placeholderCharacterAvoidingCollision(with rawOutput: String) -> String {
+        for char in SPECIAL_CHARS {
+            if !rawOutput.contains(String(char)) {
+                return String(char)
+            }
+        }
+        return "*"
+    }
 
     func findSpecialCharNotInString (str: String) -> String {
         for char in SPECIAL_CHARS {

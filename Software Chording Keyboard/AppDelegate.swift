@@ -27,12 +27,15 @@ import SwiftUI
  - [x] The app can auto-start with the system.
 
  ## Statistics
- - [ ] The app records statistics about chords used and missed, and persists these to file periodically.
- - [ ] The app can show a user their statistics.
+ - [x] The app records statistics about chords used and missed, and persists these to file periodically.
+ - [x] The app can show a user their statistics.
+ - [ ] The app periodically reloads usage data, in case it has changed on another machine
+       - On wake
+       - On interval
 
  ## UI
  - [x] The current capitalisation mode is reflected in the menu-bar icon.
- - [ ] Permissions issues are reflected in the menu.
+ - [x] Permissions issues are reflected in the menu.
  - [ ] The UI represents both single and chained chords.
  - [ ] The UI prevents adding conflicting chords.
  - [ ] Onboarding flow for permissions + tutorial
@@ -267,7 +270,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
         // We add 2 extras as we type and remove a bonus character
-        ignorekeyPresses += chord.input.count + chord.outputChunks.count + chord.pipeNegativePosition + 2
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
+
+        ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + 2
 
         typeText(text: "*")
 
@@ -277,8 +282,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
 
         // enter replacement characters
-        for i in 0..<chord.outputChunks.count {
-            var outputString = chord.outputChunks[i]
+        for i in 0..<outputSegments.count {
+            var outputString = outputSegments[i]
             switch calculatedCapitalisationMode {
             case .singleCharacter:
                 if(i == 0){
@@ -294,10 +299,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
             typeText(text: outputString)
         }
-        gDebugPrint("typed \(chord.outputChunks)")
+        gDebugPrint("typed \(outputSegments)")
 
         // Press left to get cursor to correct position
-        for _ in 0..<chord.pipeNegativePosition {
+        for _ in 0..<pipeLeftCount {
             pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
     }
@@ -370,7 +375,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                 self.checkInputAccess()
             }
 
-            // Return so that we only check one permission at a time
+        // Return so that we only check one permission at a time
             return
         }
 
@@ -498,7 +503,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         menu.addItem(withTitle: "Preferences", action: #selector(showSettingsWindow), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Send me feedback", action: #selector(openFeedback), keyEquivalent: "")
-        menu.addItem(withTitle: "Buy me a coffee", action: #selector(openCoffee), keyEquivalent: "")
+        // menu.addItem(withTitle: "Buy me a coffee", action: #selector(openCoffee), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "\(getTargetName()) \(version)", action: nil, keyEquivalent: ""))
         menu.addItem(withTitle: "Quit \(getTargetName())", action: #selector(quit), keyEquivalent: "q")
@@ -519,7 +524,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             NSWorkspace.shared.open(url)
         }
     }
-     
+
     @objc func quit() {
         NSApp.terminate(self)
     }

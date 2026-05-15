@@ -23,6 +23,7 @@
 		08E19F2629DECCAA0081AB4E /* About.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2529DECCAA0081AB4E /* About.swift */; };
 		08E19F2829DF11FC0081AB4E /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2729DF11FC0081AB4E /* AppModel.swift */; };
 		08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE66FF29E9584000F4A6E5 /* BookMarks.swift */; };
+		A1B2C3D42DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,7 @@
 		08E19F2529DECCAA0081AB4E /* About.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = About.swift; sourceTree = "<group>"; };
 		08E19F2729DF11FC0081AB4E /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		08EE66FF29E9584000F4A6E5 /* BookMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookMarks.swift; sourceTree = "<group>"; };
+		A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPlaceholderExpansion.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,6 +170,7 @@
 				08E19F2029DE1A950081AB4E /* Chord.swift */,
 				08E19F2729DF11FC0081AB4E /* AppModel.swift */,
 				08EE66FF29E9584000F4A6E5 /* BookMarks.swift */,
+				A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -327,6 +330,7 @@
 				08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */,
 				086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */,
 				081B0B0929E431550052A0BD /* Constants.swift in Sources */,
+				A1B2C3D42DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

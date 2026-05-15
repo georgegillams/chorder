@@ -203,11 +203,9 @@ class AppSettings {
     }
 
     public func setDirty() {
-        debugPrint("*** Settings dirty")
         isDirty = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
             if(self.isDirty && self.initComplete && !self.suppressWriting) {
-                debugPrint("*** Writing dirty settings to file")
                 self.writeAppSettingsToFile()
                 self.clearDirty()
             }
