@@ -281,7 +281,7 @@ struct SettingsView: View {
                     Text("Chord output")
                     TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
                         .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
+                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|" + "\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple’s ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
                     HStack {
                         Spacer()
                         Button(action: {
