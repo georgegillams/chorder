@@ -14,6 +14,15 @@ enum CapitalisationMode {
     case off, singleCharacter, fullCapitalisation
 }
 
+// Bundle identifiers of apps whose kAXSelectedTextAttribute write implementation is known to be
+// broken — the write returns success but silently discards the output and corrupts the field.
+// Apps in this set are skipped by the AX replacement path and handled by the CGEvent fallback.
+let axIncompatibleAppBundleIDs: Set<String> = [
+    "org.mozilla.firefox",
+    "org.mozilla.nightly",
+    "org.mozilla.firefoxdeveloperedition",
+]
+
 class KeyboardConstants {
     static let spaceEventKey = 49
     static let spaceKeyCode = CGKeyCode(spaceEventKey)

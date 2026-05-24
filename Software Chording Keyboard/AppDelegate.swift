@@ -260,28 +260,30 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
 
     func replaceCharacters(chord: Chord) {
-        //        let selectedText = getSelectedText()
-        //        gDebugPrint("* selectedText \(selectedText)")
+        if appModel.appSettings.useAccessibilityAPI && replaceCharactersViaAX(chord: chord) {
+            gDebugPrint("replaced via AX")
+            return
+        }
 
-        // TODO: Why we type the bonus character:
-        // TODO: This doesn't work in inputs with autosuggest (eg browser URL bars). When the user starts typing, the input shows additonal characters that are hightlighted. The first backspace removes the highlighted suggestion text instead of the latest typed character.
-        // If we didn't have a sandboxed app, we could check for highlighted text. If we want our app to be sandboxed we need an alternative solution.
-        // We could hack this using `cut`. ie save current clipboard, cut selected text, restore old clipboard value, then proceed.
+        gDebugPrint("AX replacement failed, falling back to CGEvent")
 
-        // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event
-        // We add 2 extras as we type and remove a bonus character
+        // CGEvent fallback: type a bonus *, backspace over the chord input + bonus char, then type the output.
+        // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
+        // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
         let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
 
+        // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
+        // We add 2 extras as we type and remove a bonus character.
         ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + 2
 
         typeText(text: "*")
 
-        // clear characters originally typed. +1 so that we include the bonus character above
+        // Clear characters originally typed. +1 so that we include the bonus character above.
         for _ in 0..<chord.deleteCount + 1 {
             pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
         }
 
-        // enter replacement characters
+        // Enter replacement characters.
         for i in 0..<outputSegments.count {
             var outputString = outputSegments[i]
             switch calculatedCapitalisationMode {
@@ -301,10 +303,185 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
         gDebugPrint("typed \(outputSegments)")
 
-        // Press left to get cursor to correct position
+        // Press left to get cursor to correct position.
         for _ in 0..<pipeLeftCount {
             pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
+    }
+
+    // Attempts to replace the chord input with the chord output by directly manipulating the focused
+    // text field via the Accessibility API. Returns true on success, false if any AX call fails
+    // (in which case the caller should fall back to the CGEvent approach).
+    //
+    // This approach avoids posting any synthetic key events, so ignorekeyPresses is not touched.
+    // It does not work in Electron apps (Slack, VS Code, Discord) or browser URL bars, where the
+    // AX text tree either isn't exposed or doesn't support attribute writes.
+    func replaceCharactersViaAX(chord: Chord) -> Bool {
+        // Skip apps whose kAXSelectedTextAttribute write is known to be broken — see axIncompatibleAppBundleIDs.
+        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           axIncompatibleAppBundleIDs.contains(bundleID) {
+            gDebugPrint("AX: skipping for AX-incompatible app \(bundleID)")
+            return false
+        }
+
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: AnyObject?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
+            gDebugPrint("AX: failed to get focused element")
+            return false
+        }
+        let focused = focusedRef as! AXUIElement
+
+        // Read cursor range (location = insertion point, length = selection size).
+        var rangeRef: AnyObject?
+        guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
+              let rangeValue = rangeRef else {
+            gDebugPrint("AX: failed to read kAXSelectedTextRangeAttribute")
+            return false
+        }
+        var cursorRange = CFRange(location: 0, length: 0)
+        guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &cursorRange) else {
+            gDebugPrint("AX: failed to extract CFRange from cursor range value")
+            return false
+        }
+        gDebugPrint("AX: cursorRange location=\(cursorRange.location) length=\(cursorRange.length)")
+
+        // Bail out early if the focused element doesn't support writing kAXSelectedTextAttribute.
+        // This catches terminal emulators (eg iTerm2, Terminal.app) whose text areas expose a
+        // readable AX tree but don't accept text writes — the terminal input is driven by the PTY,
+        // not by AX attribute writes. Without this check the code reaches the selection-setting step,
+        // which visibly selects text in the terminal, and then the write fails; the selection is left
+        // active when the CGEvent fallback runs, causing it to replace the wrong text.
+        var isTextWritable: DarwinBoolean = false
+        guard AXUIElementIsAttributeSettable(focused, kAXSelectedTextAttribute as CFString, &isTextWritable) == .success,
+              isTextWritable.boolValue else {
+            gDebugPrint("AX: kAXSelectedTextAttribute is not writable, bailing")
+            return false
+        }
+
+        // Ensure there are enough characters before the cursor to cover the chord input.
+        let inputCount = chord.input.count
+        guard cursorRange.location >= inputCount else {
+            gDebugPrint("AX: cursor location \(cursorRange.location) < inputCount \(inputCount), bailing")
+            return false
+        }
+        let startIndex = cursorRange.location - inputCount
+        gDebugPrint("AX: inputCount=\(inputCount) startIndex=\(startIndex)")
+
+        // Read the full field value and verify the characters immediately before the cursor
+        // (sorted, case-insensitive) match the chord input. This guards against edge cases where
+        // the cursor has moved or the field contents don't match what was typed.
+        var valueRef: AnyObject?
+        guard AXUIElementCopyAttributeValue(focused, kAXValueAttribute as CFString, &valueRef) == .success,
+              let fieldValue = valueRef as? String else {
+            gDebugPrint("AX: failed to read kAXValueAttribute")
+            return false
+        }
+        let nsField = fieldValue as NSString
+        gDebugPrint("AX: fieldValue length=\(nsField.length) value=\(nsField)")
+        guard cursorRange.location <= nsField.length else {
+            gDebugPrint("AX: cursorRange.location \(cursorRange.location) > fieldValue.length \(nsField.length), bailing")
+            return false
+        }
+        let charsBeforeCursor = nsField.substring(with: NSRange(location: startIndex, length: inputCount)).lowercased()
+        gDebugPrint("AX: charsBeforeCursor='\(charsBeforeCursor)' chordInput='\(chord.input.lowercased())'")
+        guard String(charsBeforeCursor.sorted()) == String(chord.input.lowercased().sorted()) else {
+            gDebugPrint("AX: charsBeforeCursor sorted '\(String(charsBeforeCursor.sorted()))' != chord input sorted '\(String(chord.input.lowercased().sorted()))', bailing")
+            return false
+        }
+
+        // Select the chord input characters and any forward selection (eg an autocomplete suggestion)
+        // in a single range, so they are replaced by one write below.
+        //
+        // Using two separate writes — one to clear the suggestion, one to insert the output — causes
+        // a timing problem: the first write fires an AX notification that the target app (eg a browser)
+        // processes asynchronously. By the time the app acts on it, the second write has already
+        // landed, producing garbled results. A single selection + single write avoids that race.
+        var selectRange = CFRange(location: startIndex, length: inputCount + cursorRange.length)
+        gDebugPrint("AX: setting selectRange location=\(selectRange.location) length=\(selectRange.length)")
+        guard let selectAXVal = AXValueCreate(.cfRange, &selectRange) else { return false }
+        guard AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, selectAXVal) == .success else {
+            gDebugPrint("AX: failed to set selectRange")
+            return false
+        }
+
+        // Verify the selection landed correctly before making any destructive write.
+        // Some apps (eg Firefox URL bar) report cursor/selection ranges that don't accurately map to
+        // character positions in the field value, so selectRange can end up covering characters
+        // before the chord. Reading back the actual selected text lets us catch that mismatch and
+        // restore the original cursor position before bailing out.
+        var selectedRef: AnyObject?
+        guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &selectedRef) == .success,
+              let selectedText = selectedRef as? String else {
+            gDebugPrint("AX: failed to read back kAXSelectedTextAttribute after selection, restoring cursor")
+            var orig = cursorRange
+            if let origAXVal = AXValueCreate(.cfRange, &orig) {
+                AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, origAXVal)
+            }
+            return false
+        }
+        gDebugPrint("AX: selectedText after selection='\(selectedText)'")
+        let selectedPrefix = String(selectedText.prefix(inputCount)).lowercased()
+        gDebugPrint("AX: selectedPrefix='\(selectedPrefix)' expected sorted='\(String(chord.input.lowercased().sorted()))'")
+        guard String(selectedPrefix.sorted()) == String(chord.input.lowercased().sorted()) else {
+            gDebugPrint("AX: selection verification failed, restoring cursor and bailing")
+            var orig = cursorRange
+            if let origAXVal = AXValueCreate(.cfRange, &orig) {
+                AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, origAXVal)
+            }
+            return false
+        }
+
+        // Build the output string with capitalisation applied.
+        // outputSegments are already stripped of the | cursor marker by resolvedTypingSegments().
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
+        let output = outputSegments.enumerated().map { (i, seg) -> String in
+            switch calculatedCapitalisationMode {
+            case .singleCharacter: return i == 0 ? seg.capitalizeFirstLetter() : seg
+            case .fullCapitalisation: return seg.uppercased()
+            default: return seg
+            }
+        }.joined()
+
+        gDebugPrint("AX: writing output='\(output)'")
+        // Replace the selection with the output.
+        guard AXUIElementSetAttributeValue(focused, kAXSelectedTextAttribute as CFString, output as CFTypeRef) == .success else {
+            gDebugPrint("AX: write failed")
+            return false
+        }
+
+        // Log the field state immediately after the write to help diagnose post-write anomalies
+        // (eg browsers re-evaluating the URL, cursor jumping, autocomplete interference).
+        if let postValueRef = { var r: AnyObject?; AXUIElementCopyAttributeValue(focused, kAXValueAttribute as CFString, &r); return r }() as? String {
+            gDebugPrint("AX: fieldValue after write='\(postValueRef)'")
+        }
+        var postRangeRef: AnyObject?
+        if AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &postRangeRef) == .success,
+           let postRangeValue = postRangeRef {
+            var postRange = CFRange(location: 0, length: 0)
+            if AXValueGetValue(postRangeValue as! AXValue, .cfRange, &postRange) {
+                gDebugPrint("AX: cursorRange after write location=\(postRange.location) length=\(postRange.length)")
+            }
+        }
+
+        // Reposition the cursor for the | pipe marker (pipeLeftCount chars from the end of output).
+        if pipeLeftCount > 0 {
+            var afterRangeRef: AnyObject?
+            if AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &afterRangeRef) == .success,
+               let afterRangeValue = afterRangeRef {
+                var afterRange = CFRange(location: 0, length: 0)
+                if AXValueGetValue(afterRangeValue as! AXValue, .cfRange, &afterRange) {
+                    let insertionEnd = afterRange.location + afterRange.length
+                    let finalLoc = max(0, insertionEnd - pipeLeftCount)
+                    var finalRange = CFRange(location: finalLoc, length: 0)
+                    if let finalAXVal = AXValueCreate(.cfRange, &finalRange) {
+                        AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, finalAXVal)
+                    }
+                }
+            }
+        }
+
+        return true
     }
 
     func pressKey(keyCode: CGKeyCode) {
