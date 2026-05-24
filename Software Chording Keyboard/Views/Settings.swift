@@ -172,6 +172,14 @@ struct SettingsView: View {
                         }
                         Spacer()
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
+                    }.padding(.bottom, 8)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Use Accessibility API for replacement")
+                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg browser URL bars, Electron apps).").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {}.toggleStyle(.switch)
                     }
                 }
 

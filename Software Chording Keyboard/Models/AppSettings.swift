@@ -21,6 +21,11 @@ class AppSettings {
             writeAppSettingsToFile()
         }
     }
+    @Published public var useAccessibilityAPI: Bool {
+        didSet {
+            writeAppSettingsToFile()
+        }
+    }
 
     /* Calculated */
     private(set) public var millisecondsToHold: Double
@@ -43,6 +48,7 @@ class AppSettings {
         chords = []
         millisecondsToHoldStr = "100ms"
         millisecondsToHold = 100
+        useAccessibilityAPI = true  // default; overwritten by readAppSettingsFromFile() below
 
         settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
         gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
@@ -90,6 +96,7 @@ class AppSettings {
         do {
             let serialisableSettings = try jsonDecoder.decode(SerialisableAppSettings.self, from: jsonData)
             millisecondsToHoldStr = serialisableSettings.millisecondsToHold
+            useAccessibilityAPI = serialisableSettings.useAccessibilityAPI ?? true
             chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
             recalculateAlphabeticalMapping()
         } catch {
@@ -106,7 +113,7 @@ class AppSettings {
     }
 
     func getSettingsJsonString() -> String{
-        let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr, chords: serialiseChords(chords: chords) )
+        let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr, useAccessibilityAPI: useAccessibilityAPI, chords: serialiseChords(chords: chords))
 
         let jsonEncoder = JSONEncoder()
         jsonEncoder.outputFormatting = .prettyPrinted
@@ -225,5 +232,6 @@ class AppSettings {
 
 struct SerialisableAppSettings: Codable {
     var millisecondsToHold: String
+    var useAccessibilityAPI: Bool?  // optional so existing settings files without the key default to true
     var chords: [[String: String]]
 }
