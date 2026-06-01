@@ -92,14 +92,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     // TODO: Can we replace ignoreKeyPresses with mode = "Working". If Working, ignore.
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
-    var charactersTypedSinceSpaceOwed = 0
     var owedSpace = false
-    var aboutToRemoveSpace = false
-    var shiftPressedDown = false {
-        didSet {
-            updateMenuBarIcon()
-        }
-    }
+    var shiftPressedDown = false
     var capitalisationMode = CapitalisationMode.off {
         didSet {
             updateMenuBarIcon()
@@ -191,7 +185,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return
         }
 
-        if(KeyboardConstants.skipPreceedingSpaceCharacters.contains(character ?? "")){
+        if(KeyboardConstants.skipPrecedingSpaceCharacters.contains(character ?? "")){
             if(owedSpace){
                 gDebugPrint("DROPPING OWED SPACE DUE TO PUNCTUATION!")
             }
@@ -213,12 +207,12 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             self.typeText(text: " \(character ?? "")" )
         }
 
-        self.charactersTypedSinceSpaceOwed += 1
+//        self.charactersTypedSinceSpaceOwed += 1
 
         inputCharacters.add(character)
         gDebugPrint("inputCharacters \(inputCharacters)")
 
-        if (inputCharacters.count < 2){
+        if (inputCharacters.count <= 1){
             return
         }
 
@@ -244,7 +238,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     self.appModel.appSettings.setDirty()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
-                    self.charactersTypedSinceSpaceOwed = 0
+//                    self.charactersTypedSinceSpaceOwed = 0
                 }
             }
         }
@@ -273,7 +267,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
 
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
-        // We add 2 extras as we type and remove a bonus character.
+        // We add 2 extras as we type and remove a bonus * character.
         ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + 2
 
         typeText(text: "*")
@@ -286,6 +280,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // Enter replacement characters.
         for i in 0..<outputSegments.count {
             var outputString = outputSegments[i]
+
+            // TODO: Move capitalisation logic to chord.resolvedTypingSegments()
             switch calculatedCapitalisationMode {
             case .singleCharacter:
                 if(i == 0){
@@ -317,16 +313,16 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     // It does not work in Electron apps (Slack, VS Code, Discord) or browser URL bars, where the
     // AX text tree either isn't exposed or doesn't support attribute writes.
     func replaceCharactersViaAX(chord: Chord) -> Bool {
-        // Skip apps whose kAXSelectedTextAttribute write is known to be broken — see axIncompatibleAppBundleIDs.
+        // Skip apps whose kAXSelectedTextAttribute write is known to be broken
         if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
            axIncompatibleAppBundleIDs.contains(bundleID) {
             gDebugPrint("AX: skipping for AX-incompatible app \(bundleID)")
             return false
         }
 
-        let systemWide = AXUIElementCreateSystemWide()
+        let axUiElement = AXUIElementCreateSystemWide()
         var focusedRef: AnyObject?
-        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
+        guard AXUIElementCopyAttributeValue(axUiElement, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
             gDebugPrint("AX: failed to get focused element")
             return false
         }
