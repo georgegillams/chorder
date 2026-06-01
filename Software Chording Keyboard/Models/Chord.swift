@@ -7,6 +7,12 @@
 
 import Foundation
 
+extension String {
+    func capitalizeFirstLetter() -> String {
+        prefix(1).uppercased() + lowercased().dropFirst()
+    }
+}
+
 let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 
 let maximumOutputChunkLength = 10
@@ -71,15 +77,32 @@ class Chord: Identifiable, ObservableObject {
     }
 
     /// Text to type and how many left-arrow presses follow, after expanding `{{date}}` tokens at fire time.
-    func resolvedTypingSegments(referenceDate: Date = Date()) -> (segments: [String], leftArrowCount: Int) {
+    func resolvedTypingSegments(
+        referenceDate: Date = Date(),
+        capitalisationMode: CapitalisationMode = .off
+    ) -> (segments: [String], leftArrowCount: Int) {
         let decomposed = Self.decomposedOutput(for: output)
         if decomposed.invalid {
-            return (outputChunks, pipeNegativePosition)
+            return (Self.capitalisedSegments(outputChunks, mode: capitalisationMode), pipeNegativePosition)
         }
         let before = OutputPlaceholderExpansion.expand(decomposed.beforeCursor, referenceDate: referenceDate)
         let after = OutputPlaceholderExpansion.expand(decomposed.afterCursor, referenceDate: referenceDate)
         let merged = before + after
-        return (merged.chunked(into: maximumOutputChunkLength), after.count)
+        let segments = merged.chunked(into: maximumOutputChunkLength)
+        return (Self.capitalisedSegments(segments, mode: capitalisationMode), after.count)
+    }
+
+    private static func capitalisedSegments(_ segments: [String], mode: CapitalisationMode) -> [String] {
+        segments.enumerated().map { index, segment in
+            switch mode {
+            case .singleCharacter:
+                return index == 0 ? segment.capitalizeFirstLetter() : segment
+            case .fullCapitalisation:
+                return segment.uppercased()
+            case .off:
+                return segment
+            }
+        }
     }
 
     private static func placeholderCharacterAvoidingCollision(with rawOutput: String) -> String {

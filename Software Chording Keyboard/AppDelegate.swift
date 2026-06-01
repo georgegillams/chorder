@@ -69,12 +69,6 @@ import SwiftUI
  - [x] When backspace, esc, etc are pressed, capitalisation mode is turned off.
  */
 
-extension String {
-    func capitalizeFirstLetter() -> String {
-        return prefix(1).uppercased() + self.lowercased().dropFirst()
-    }
-}
-
 @main
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     /* Application */
@@ -264,7 +258,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // CGEvent fallback: type a bonus *, backspace over the chord input + bonus char, then type the output.
         // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
         // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+            capitalisationMode: calculatedCapitalisationMode
+        )
 
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
         // We add 2 extras as we type and remove a bonus * character.
@@ -278,23 +274,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
 
         // Enter replacement characters.
-        for i in 0..<outputSegments.count {
-            var outputString = outputSegments[i]
-
-            // TODO: Move capitalisation logic to chord.resolvedTypingSegments()
-            switch calculatedCapitalisationMode {
-            case .singleCharacter:
-                if(i == 0){
-                    outputString = outputString.capitalizeFirstLetter()
-                }
-                break
-            case .fullCapitalisation:
-                outputString = outputString.uppercased()
-                break
-            default:
-                break
-            }
-
+        for outputString in outputSegments {
             typeText(text: outputString)
         }
         gDebugPrint("typed \(outputSegments)")
@@ -428,16 +408,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return false
         }
 
-        // Build the output string with capitalisation applied.
-        // outputSegments are already stripped of the | cursor marker by resolvedTypingSegments().
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
-        let output = outputSegments.enumerated().map { (i, seg) -> String in
-            switch calculatedCapitalisationMode {
-            case .singleCharacter: return i == 0 ? seg.capitalizeFirstLetter() : seg
-            case .fullCapitalisation: return seg.uppercased()
-            default: return seg
-            }
-        }.joined()
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+            capitalisationMode: calculatedCapitalisationMode
+        )
+        let output = outputSegments.joined()
 
         gDebugPrint("AX: writing output='\(output)'")
         // Replace the selection with the output.
