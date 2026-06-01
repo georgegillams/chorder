@@ -9,12 +9,17 @@ import Foundation
 import SwiftUI
 
 class AppSettings {
-    private var initComplete: Bool = false
-    private var suppressWriting: Bool = false
+    private var initialisationComplete: Bool = false
+    private var suppressWritingToFile: Bool = false
     @Published private(set) public var isDirty: Bool = false
 
     /* Raw settings */
-    @Published private(set) public var chords: [Chord]
+    @Published private(set) public var chords: [Chord] {
+        didSet {
+            recalculateAlphabeticalMapping()
+            writeAppSettingsToFile()
+        }
+    }
     @Published public var millisecondsToHoldStr: String {
         didSet {
             millisecondsToHold = Double(millisecondsToHoldStr.replacingOccurrences(of: "ms", with: "")) ?? millisecondsToHold
@@ -45,32 +50,26 @@ class AppSettings {
     }
 
     init() {
+        // default values - overwritten by readAppSettingsFromFile() below
         chords = []
         millisecondsToHoldStr = "100ms"
         millisecondsToHold = 100
-        useAccessibilityAPI = true  // default; overwritten by readAppSettingsFromFile() below
+        useAccessibilityAPI = true
+        // end of default values
 
         settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
         gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
         bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
         readAppSettingsFromFile()
-        initComplete = true
+        initialisationComplete = true
     }
 
     public func addChord(chord: Chord) {
         chords.append(chord)
-        recalculateAlphabeticalMapping()
-        writeAppSettingsToFile()
     }
 
     public func removeChords(chords: Set<Chord.ID>) {
         self.chords.removeAll(where: { chords.contains($0.id) })
-        recalculateAlphabeticalMapping()
-        writeAppSettingsToFile()
-    }
-
-    public func recalculateAppSettings () {
-        recalculateAlphabeticalMapping()
     }
 
     func recalculateAlphabeticalMapping() {
@@ -98,7 +97,6 @@ class AppSettings {
             millisecondsToHoldStr = serialisableSettings.millisecondsToHold
             useAccessibilityAPI = serialisableSettings.useAccessibilityAPI ?? true
             chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
-            recalculateAlphabeticalMapping()
         } catch {
             gDebugPrint("Error deserialising data \(error)")
         }
@@ -130,7 +128,7 @@ class AppSettings {
     // TODO: Would be nice if this first re-reads usage numbers, and only overwrites if greater than existing value.
     // TODO: That way, across multiple devices, usage won't get lost.
     func writeAppSettingsToFile() {
-        if(!initComplete || suppressWriting) {
+        if(!initialisationComplete || suppressWritingToFile) {
             return
         }
 
@@ -149,7 +147,7 @@ class AppSettings {
 
     func readAppSettingsFromFile() {
         // While we read values from file and we're setting them, suppress re-writing to the file again
-        suppressWriting = true
+        suppressWritingToFile = true
 
         if (FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
             do {
@@ -160,9 +158,9 @@ class AppSettings {
             }
         }
 
-        recalculateAppSettings()
+        recalculateAlphabeticalMapping()
 
-        suppressWriting = false
+        suppressWritingToFile = false
         clearDirty()
     }
 
@@ -212,7 +210,7 @@ class AppSettings {
     public func setDirty() {
         isDirty = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-            if(self.isDirty && self.initComplete && !self.suppressWriting) {
+            if(self.isDirty && self.initialisationComplete && !self.suppressWritingToFile) {
                 self.writeAppSettingsToFile()
                 self.clearDirty()
             }

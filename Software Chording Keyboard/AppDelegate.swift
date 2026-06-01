@@ -69,12 +69,6 @@ import SwiftUI
  - [x] When backspace, esc, etc are pressed, capitalisation mode is turned off.
  */
 
-extension String {
-    func capitalizeFirstLetter() -> String {
-        return prefix(1).uppercased() + self.lowercased().dropFirst()
-    }
-}
-
 @main
 class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     /* Application */
@@ -85,21 +79,14 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var statusBarItem: NSStatusItem!
     var settingsWindow: NSWindow? = nil
     var settingsUI: SettingsView? = nil
-    var aboutUI: AboutView? = nil
 
     /* Typing */
 
     // TODO: Can we replace ignoreKeyPresses with mode = "Working". If Working, ignore.
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
-    var charactersTypedSinceSpaceOwed = 0
     var owedSpace = false
-    var aboutToRemoveSpace = false
-    var shiftPressedDown = false {
-        didSet {
-            updateMenuBarIcon()
-        }
-    }
+    var shiftPressedDown = false
     var capitalisationMode = CapitalisationMode.off {
         didSet {
             updateMenuBarIcon()
@@ -191,7 +178,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return
         }
 
-        if(KeyboardConstants.skipPreceedingSpaceCharacters.contains(character ?? "")){
+        if(KeyboardConstants.skipPrecedingSpaceCharacters.contains(character ?? "")){
             if(owedSpace){
                 gDebugPrint("DROPPING OWED SPACE DUE TO PUNCTUATION!")
             }
@@ -201,7 +188,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         gDebugPrint("owedSpace \(owedSpace)")
         gDebugPrint("char \(character)")
-        let inputEmpty = inputCharacters.count == 0
 
         if(owedSpace){
             owedSpace = false
@@ -213,12 +199,12 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             self.typeText(text: " \(character ?? "")" )
         }
 
-        self.charactersTypedSinceSpaceOwed += 1
+//        self.charactersTypedSinceSpaceOwed += 1
 
         inputCharacters.add(character)
         gDebugPrint("inputCharacters \(inputCharacters)")
 
-        if (inputCharacters.count < 2){
+        if (inputCharacters.count <= 1){
             return
         }
 
@@ -244,14 +230,13 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     self.appModel.appSettings.setDirty()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
-                    self.charactersTypedSinceSpaceOwed = 0
+//                    self.charactersTypedSinceSpaceOwed = 0
                 }
             }
         }
     }
 
     func keyUpHandler (event: NSEvent) {
-        let eventKey = event.keyCode
         let character = event.characters
 
         self.inputCharacters.remove(character)
@@ -270,10 +255,12 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // CGEvent fallback: type a bonus *, backspace over the chord input + bonus char, then type the output.
         // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
         // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+            capitalisationMode: calculatedCapitalisationMode
+        )
 
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
-        // We add 2 extras as we type and remove a bonus character.
+        // We add 2 extras as we type and remove a bonus * character.
         ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + 2
 
         typeText(text: "*")
@@ -284,21 +271,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
 
         // Enter replacement characters.
-        for i in 0..<outputSegments.count {
-            var outputString = outputSegments[i]
-            switch calculatedCapitalisationMode {
-            case .singleCharacter:
-                if(i == 0){
-                    outputString = outputString.capitalizeFirstLetter()
-                }
-                break
-            case .fullCapitalisation:
-                outputString = outputString.uppercased()
-                break
-            default:
-                break
-            }
-
+        for outputString in outputSegments {
             typeText(text: outputString)
         }
         gDebugPrint("typed \(outputSegments)")
@@ -317,16 +290,16 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     // It does not work in Electron apps (Slack, VS Code, Discord) or browser URL bars, where the
     // AX text tree either isn't exposed or doesn't support attribute writes.
     func replaceCharactersViaAX(chord: Chord) -> Bool {
-        // Skip apps whose kAXSelectedTextAttribute write is known to be broken — see axIncompatibleAppBundleIDs.
+        // Skip apps whose kAXSelectedTextAttribute write is known to be broken
         if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
            axIncompatibleAppBundleIDs.contains(bundleID) {
             gDebugPrint("AX: skipping for AX-incompatible app \(bundleID)")
             return false
         }
 
-        let systemWide = AXUIElementCreateSystemWide()
+        let axUiElement = AXUIElementCreateSystemWide()
         var focusedRef: AnyObject?
-        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
+        guard AXUIElementCopyAttributeValue(axUiElement, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
             gDebugPrint("AX: failed to get focused element")
             return false
         }
@@ -432,16 +405,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return false
         }
 
-        // Build the output string with capitalisation applied.
-        // outputSegments are already stripped of the | cursor marker by resolvedTypingSegments().
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments()
-        let output = outputSegments.enumerated().map { (i, seg) -> String in
-            switch calculatedCapitalisationMode {
-            case .singleCharacter: return i == 0 ? seg.capitalizeFirstLetter() : seg
-            case .fullCapitalisation: return seg.uppercased()
-            default: return seg
-            }
-        }.joined()
+        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+            capitalisationMode: calculatedCapitalisationMode
+        )
+        let output = outputSegments.joined()
 
         gDebugPrint("AX: writing output='\(output)'")
         // Replace the selection with the output.
@@ -600,37 +567,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         }
     }
 
-    func getSelectedText() -> String? {
-        //        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-        //            let selectedText = self.getSelectedText()
-        //            gDebugPrint("** selectedText \(selectedText)")
-        //        }
-        let systemWideElement = AXUIElementCreateSystemWide()
-        gDebugPrint("* systemWideElement \(systemWideElement)")
-
-        var selectedTextValue: AnyObject?
-        let errorCode = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &selectedTextValue)
-        gDebugPrint("* errorCode \(errorCode)")
-
-        if errorCode == .success {
-            let selectedTextElement = selectedTextValue as! AXUIElement
-            var selectedText: AnyObject?
-            gDebugPrint("* selectedText \(selectedText)")
-            let textErrorCode = AXUIElementCopyAttributeValue(selectedTextElement, kAXSelectedTextAttribute as CFString, &selectedText)
-
-            if textErrorCode == .success, let selectedTextString = selectedText as? String {
-                return selectedTextString
-            } else {
-                return nil
-                gDebugPrint("* selectedText nil")
-            }
-        } else {
-            return nil
-            gDebugPrint("* selectedText nil")
-        }
-
-    }
-
     func updateMenuBarIcon() {
         let accessibilityDescription = "\(getTargetName()) Preferences"
 
@@ -680,7 +616,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         menu.addItem(withTitle: "Preferences", action: #selector(showSettingsWindow), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Send me feedback", action: #selector(openFeedback), keyEquivalent: "")
-        // menu.addItem(withTitle: "Buy me a coffee", action: #selector(openCoffee), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "\(getTargetName()) \(version)", action: nil, keyEquivalent: ""))
         menu.addItem(withTitle: "Quit \(getTargetName())", action: #selector(quit), keyEquivalent: "q")
@@ -692,12 +627,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
     @objc func openFeedback() {
         if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    @objc func openCoffee() {
-        if let url = URL(string: "https://www.georgegillams.co.uk/coffee") {
             NSWorkspace.shared.open(url)
         }
     }

@@ -176,7 +176,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Use Accessibility API for replacement")
-                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg browser URL bars, Electron apps).").font(.caption).foregroundColor(.secondary)
+                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal).").font(.caption).foregroundColor(.secondary)
                         }
                         Spacer()
                         Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {}.toggleStyle(.switch)
