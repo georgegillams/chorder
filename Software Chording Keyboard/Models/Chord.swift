@@ -114,15 +114,6 @@ class Chord: Identifiable, ObservableObject {
         return "*"
     }
 
-    func findSpecialCharNotInString (str: String) -> String {
-        for char in SPECIAL_CHARS {
-            if(!str.contains(String(char))) {
-                return String(char)
-            }
-        }
-        return "*"
-    }
-
     func incrementUsageCount() {
         if(usageCount == nil) {
             usageCount = 0

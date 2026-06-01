@@ -72,10 +72,6 @@ class AppSettings {
         self.chords.removeAll(where: { chords.contains($0.id) })
     }
 
-    public func recalculateAppSettings () {
-        recalculateAlphabeticalMapping()
-    }
-
     func recalculateAlphabeticalMapping() {
         alphabeticalInputOutputMappingDictionary = [:]
         for chord in chords {
@@ -162,7 +158,7 @@ class AppSettings {
             }
         }
 
-        recalculateAppSettings()
+        recalculateAlphabeticalMapping()
 
         suppressWritingToFile = false
         clearDirty()
