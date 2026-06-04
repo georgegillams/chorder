@@ -227,7 +227,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     // self.inputCharacters.removeAllObjects()
 
                     self.replaceCharacters(chord: chord!)
-                    chord!.incrementUsageCount()
+                    self.appModel.appSettings.incrementUsage(for: chord!)
                     self.appModel.appSettings.setDirty()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe

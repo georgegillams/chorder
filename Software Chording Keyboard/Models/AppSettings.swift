@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-class AppSettings {
+class AppSettings: ObservableObject {
     private var initialisationComplete: Bool = false
     private var suppressWritingToFile: Bool = false
     @Published private(set) public var isDirty: Bool = false
@@ -84,6 +84,11 @@ class AppSettings {
         chords[index].update(input: input, output: output, capitalisationMode: capitalisationMode)
         recalculateAlphabeticalMapping()
         writeAppSettingsToFile()
+    }
+
+    public func incrementUsage(for chord: Chord) {
+        chord.incrementUsageCount()
+        objectWillChange.send()
     }
 
     func recalculateAlphabeticalMapping() {

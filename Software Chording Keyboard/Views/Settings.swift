@@ -109,6 +109,42 @@ struct SettingsView: View {
         chordFormCapitalisationMode = .default
     }
 
+    private func revealSettingsFileInFinder() {
+        guard let directory = appModel.appSettings.settingsFileDirectory else {
+            return
+        }
+        let settingsFilePath = appModel.appSettings.settingsFileLocation.path
+        NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directory.path)
+    }
+
+    private func attributedConfigFileEditTip(plain: String, backupLocation: URL) -> AttributedString {
+        var attributed = AttributedString(plain)
+        if let range = attributed.range(of: "your config") {
+            attributed[range].link = backupLocation
+            attributed[range].foregroundColor = .accentColor
+            attributed[range].underlineStyle = .single
+        }
+        return attributed
+    }
+
+    @ViewBuilder
+    private var configFileEditTip: some View {
+        let plain = "💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!"
+        if let backupLocation = appModel.appSettings.settingsFileDirectory {
+            Text(attributedConfigFileEditTip(plain: plain, backupLocation: backupLocation))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .environment(\.openURL, OpenURLAction { _ in
+                    revealSettingsFileInFinder()
+                    return .handled
+                })
+        } else {
+            Text(plain)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
     private func saveChordEditor() {
         switch chordEditorContext {
         case .create:
@@ -239,8 +275,7 @@ struct SettingsView: View {
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
                     }.cornerRadius(8)
-                    Text("Note: Usage counts may not update until preferences are closed and re-opened, due to a rendering bug.").font(.caption).foregroundColor(.secondary).padding(.bottom, 4)
-                    Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
+                    configFileEditTip
                 }
 
                 // Input
@@ -293,11 +328,7 @@ struct SettingsView: View {
 
                     }
                     if let backupLocation = appModel.appSettings.settingsFileDirectory {
-                        Button(action: {
-                            let settingsFilePath = appModel.appSettings.settingsFileLocation.path
-                            let directoryPath = appModel.appSettings.settingsFileDirectory!.path
-                            NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directoryPath)
-                        }) {
+                        Button(action: revealSettingsFileInFinder) {
                             Text("Current location: \(backupLocation.path)")
                                 .font(.caption)
                                 .foregroundColor(.accentColor)
