@@ -50,14 +50,15 @@ class Chord: Identifiable, ObservableObject {
             return String(input.sorted())
         }
     }
-    var deleteCount: Int
     @Published var output: String
-    var outputChunks: [String] = []
-    var pipeNegativePosition: Int
-    var hasPipe: Bool
-
-    @Published var usageCount: Int?
     @Published var capitalisationMode: ChordCapitalisationMode
+    @Published var usageCount: Int?
+
+    // These values are calculated when the chord definition changes.
+    var deleteCount = 0
+    var outputChunks: [String] = []
+    var pipeNegativePosition = 0
+    var hasPipe = false
 
     // Computed property for sorting
     var usageCountForSorting: Int {
@@ -75,22 +76,33 @@ class Chord: Identifiable, ObservableObject {
         self.output = output
         self.usageCount = usageCount
         self.capitalisationMode = capitalisationMode
-        self.pipeNegativePosition = 0
-        self.hasPipe = false
+        rebuildDerivedState()
+    }
+
+    func update(input: String, output: String, capitalisationMode: ChordCapitalisationMode) {
+        self.input = input
+        self.output = output
+        self.capitalisationMode = capitalisationMode
+        rebuildDerivedState()
+    }
+
+    private func rebuildDerivedState() {
+        pipeNegativePosition = 0
+        hasPipe = false
 
         let decomposed = Self.decomposedOutput(for: output)
         if decomposed.invalid {
             gDebugPrint("Error: Chord output has more than one pipe")
-            self.deleteCount = input.count
+            deleteCount = input.count
             return
         }
 
         let outputWithPipes = decomposed.beforeCursor + decomposed.afterCursor
 
-        self.deleteCount = input.count
-        self.outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
-        self.pipeNegativePosition = decomposed.hasPipe ? decomposed.afterCursor.count : 0
-        self.hasPipe = decomposed.hasPipe
+        deleteCount = input.count
+        outputChunks = outputWithPipes.chunked(into: maximumOutputChunkLength)
+        pipeNegativePosition = decomposed.hasPipe ? decomposed.afterCursor.count : 0
+        hasPipe = decomposed.hasPipe
     }
 
     /// Splits raw chord output into typed segments before and after the cursor pipe (`\|` is a literal pipe).

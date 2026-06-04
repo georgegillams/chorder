@@ -8,14 +8,19 @@
 import SwiftUI
 import LaunchAtLogin
 
+private enum ChordEditorContext {
+    case create
+    case edit(Chord.ID)
+}
+
 struct SettingsView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
     @ObservedObject var appModel: AppModel
     @State private var selectedChords = Set<Chord.ID>()
-    @State private var creatingChord = false
-    @State private var newChordInput = ""
-    @State private var newChordOutput = ""
-    @State private var newChordCapitalisationMode: ChordCapitalisationMode = .default
+    @State private var chordEditorContext: ChordEditorContext?
+    @State private var chordFormInput = ""
+    @State private var chordFormOutput = ""
+    @State private var chordFormCapitalisationMode: ChordCapitalisationMode = .default
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
@@ -57,6 +62,72 @@ struct SettingsView: View {
         }
 
         return chords
+    }
+
+    private var isChordEditorPresented: Bool {
+        chordEditorContext != nil
+    }
+
+    private var chordEditorTitle: String {
+        switch chordEditorContext {
+        case .create, nil:
+            return "New chord"
+        case .edit:
+            return "Edit chord"
+        }
+    }
+
+    private func openCreateChordEditor() {
+        chordFormInput = ""
+        chordFormOutput = ""
+        chordFormCapitalisationMode = .default
+        chordEditorContext = .create
+    }
+
+    private func openEditChordEditor(for id: Chord.ID) {
+        guard let chord = appModel.appSettings.chords.first(where: { $0.id == id }) else {
+            return
+        }
+        selectedChords = [id]
+        chordFormInput = chord.input
+        chordFormOutput = chord.output
+        chordFormCapitalisationMode = chord.capitalisationMode
+        chordEditorContext = .edit(id)
+    }
+
+    private func editSelectedChord() {
+        guard let id = selectedChords.first, selectedChords.count == 1 else {
+            return
+        }
+        openEditChordEditor(for: id)
+    }
+
+    private func dismissChordEditor() {
+        chordEditorContext = nil
+        chordFormInput = ""
+        chordFormOutput = ""
+        chordFormCapitalisationMode = .default
+    }
+
+    private func saveChordEditor() {
+        switch chordEditorContext {
+        case .create:
+            appModel.appSettings.addChord(chord: Chord(
+                input: chordFormInput,
+                output: chordFormOutput,
+                capitalisationMode: chordFormCapitalisationMode
+            ))
+        case .edit(let id):
+            appModel.appSettings.updateChord(
+                id: id,
+                input: chordFormInput,
+                output: chordFormOutput,
+                capitalisationMode: chordFormCapitalisationMode
+            )
+        case nil:
+            return
+        }
+        dismissChordEditor()
     }
 
     var body: some View {
@@ -148,9 +219,7 @@ struct SettingsView: View {
                             previousSortOrder = newSortOrder
                         }
                         HStack(spacing:0) {
-                            Button(action: {
-                                creatingChord = true
-                            }) {
+                            Button(action: openCreateChordEditor) {
                                 Text("+").font(.title2)
                             }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
                             Button(action: {
@@ -159,6 +228,14 @@ struct SettingsView: View {
                             }) {
                                 Text("-").font(.title2)
                             }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20).disabled(selectedChords.isEmpty)
+                            Button(action: editSelectedChord) {
+                                Image(systemName: "pencil")
+                            }
+                            .buttonStyle(.borderless)
+                            .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                            .disabled(selectedChords.count != 1)
+                            .accessibilityLabel("Edit")
+                            .help("Edit")
                             Spacer()
                         }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
                     }.cornerRadius(8)
@@ -281,19 +358,18 @@ struct SettingsView: View {
                         }
                     }
                 }
-            }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
+            }.padding(.all, 8).padding(.bottom, 20).blur(radius: isChordEditorPresented ? 50 : 0.0)
 
-            // Create
-            if(creatingChord) {
+            if isChordEditorPresented {
                 VStack(alignment: .leading) {
-                    Text("New chord").font(.headline).padding(.bottom,8)
+                    Text(chordEditorTitle).font(.headline).padding(.bottom,8)
                     Text("Chord input")
-                    TextField("Chord input", text: $newChordInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                    TextField("Chord input", text: $chordFormInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
                         .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
                     Text("Chord output")
-                    TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
+                    TextField("Chord output", text: $chordFormOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
                         .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Picker("Capitalisation", selection: $newChordCapitalisationMode) {
+                    Picker("Capitalisation", selection: $chordFormCapitalisationMode) {
                         ForEach(ChordCapitalisationMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
                         }
@@ -303,25 +379,10 @@ struct SettingsView: View {
                     Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|" + "\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple’s ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
                     HStack {
                         Spacer()
-                        Button(action: {
-                            creatingChord = false
-                            newChordInput = ""
-                            newChordOutput = ""
-                            newChordCapitalisationMode = .default
-                        }) {
+                        Button(action: dismissChordEditor) {
                             Text("Cancel").font(Font.caption)
                         }
-                        Button(action: {
-                            creatingChord = false
-                            appModel.appSettings.addChord(chord: Chord(
-                                input: newChordInput,
-                                output: newChordOutput,
-                                capitalisationMode: newChordCapitalisationMode
-                            ))
-                            newChordInput = ""
-                            newChordOutput = ""
-                            newChordCapitalisationMode = .default
-                        }) {
+                        Button(action: saveChordEditor) {
                             Text("Save").font(Font.caption)
                         }
                     }

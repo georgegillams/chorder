@@ -72,6 +72,20 @@ class AppSettings {
         self.chords.removeAll(where: { chords.contains($0.id) })
     }
 
+    public func updateChord(
+        id: Chord.ID,
+        input: String,
+        output: String,
+        capitalisationMode: ChordCapitalisationMode
+    ) {
+        guard let index = chords.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        chords[index].update(input: input, output: output, capitalisationMode: capitalisationMode)
+        recalculateAlphabeticalMapping()
+        writeAppSettingsToFile()
+    }
+
     func recalculateAlphabeticalMapping() {
         alphabeticalInputOutputMappingDictionary = [:]
         for chord in chords {
