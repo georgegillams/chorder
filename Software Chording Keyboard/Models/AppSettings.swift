@@ -82,9 +82,15 @@ class AppSettings {
     func deserialiseChords(serialisableChords: [[String: String]]) -> [Chord] {
         var chords: [Chord] = []
         for serialisableChord in serialisableChords {
-            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? "",
-                                usageCount: Int(serialisableChord["usageCount"] ?? "0")
-                               ))
+            let capitalisationMode = ChordCapitalisationMode(
+                rawValue: serialisableChord["capitalisationMode"] ?? ""
+            ) ?? .default
+            chords.append(Chord(
+                input: serialisableChord["input"] ?? "",
+                output: serialisableChord["output"] ?? "",
+                usageCount: Int(serialisableChord["usageCount"] ?? "0"),
+                capitalisationMode: capitalisationMode
+            ))
         }
         return chords
     }
@@ -105,7 +111,12 @@ class AppSettings {
     func serialiseChords(chords: [Chord]) -> [[String: String]] {
         var serialisableChords: [[String: String]] = []
         for chord in chords {
-            serialisableChords.append(["input": chord.input, "output": chord.output, "usageCount": String(chord.usageCount ?? 0)])
+            serialisableChords.append([
+                "input": chord.input,
+                "output": chord.output,
+                "usageCount": String(chord.usageCount ?? 0),
+                "capitalisationMode": chord.capitalisationMode.rawValue,
+            ])
         }
         return serialisableChords
     }

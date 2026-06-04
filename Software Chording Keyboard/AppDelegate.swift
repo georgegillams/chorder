@@ -171,6 +171,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return
         }
 
+        // If navigating through text, clear everything
         if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
             capitalisationMode = .off
             inputCharacters.removeAllObjects()
@@ -180,7 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         if(KeyboardConstants.skipPrecedingSpaceCharacters.contains(character ?? "")){
             if(owedSpace){
-                gDebugPrint("DROPPING OWED SPACE DUE TO PUNCTUATION!")
+                gDebugPrint("Dropping owed space due to punctuation!")
             }
             owedSpace = false;
         }
@@ -255,7 +256,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // CGEvent fallback: type a bonus *, backspace over the chord input + bonus char, then type the output.
         // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
         // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+        let (outputSegments, pipeLeftCount) = chord.resolveTypingSegments(
             capitalisationMode: calculatedCapitalisationMode
         )
 
@@ -405,7 +406,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return false
         }
 
-        let (outputSegments, pipeLeftCount) = chord.resolvedTypingSegments(
+        let (outputSegments, pipeLeftCount) = chord.resolveTypingSegments(
             capitalisationMode: calculatedCapitalisationMode
         )
         let output = outputSegments.joined()
@@ -590,7 +591,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         settingsUI = SettingsView(appModel: appModel)
         if(settingsWindow == nil) {
-            settingsWindow = NSWindow(contentRect: NSMakeRect(0, 0, 300, 500), styleMask: [.closable, .titled, .resizable], backing: .buffered, defer: false)
+            settingsWindow = NSWindow(contentRect: NSMakeRect(0, 0, 640, 500), styleMask: [.closable, .titled, .resizable], backing: .buffered, defer: false)
         }
 
         if let window = settingsWindow {

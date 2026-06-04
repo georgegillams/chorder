@@ -7,6 +7,32 @@
 
 import Foundation
 
+enum ChordCapitalisationMode: String, CaseIterable, Identifiable, Hashable {
+    case `default`
+    case alwaysOriginalCase
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .default:
+            return "Default"
+        case .alwaysOriginalCase:
+            return "Always original case"
+        }
+    }
+
+    /// Label shown in the chords table (`default` is blank).
+    var tableLabel: String {
+        switch self {
+        case .default:
+            return ""
+        case .alwaysOriginalCase:
+            return "Fixed"
+        }
+    }
+}
+
 extension String {
     func capitalizeFirstLetter() -> String {
         prefix(1).uppercased() + lowercased().dropFirst()
@@ -19,7 +45,11 @@ let maximumOutputChunkLength = 10
 
 class Chord: Identifiable, ObservableObject {
     @Published var input: String
-    var inputSorted: String
+    var inputSorted: String {
+        get {
+            return String(input.sorted())
+        }
+    }
     var deleteCount: Int
     @Published var output: String
     var outputChunks: [String] = []
@@ -27,20 +57,26 @@ class Chord: Identifiable, ObservableObject {
     var hasPipe: Bool
 
     @Published var usageCount: Int?
+    @Published var capitalisationMode: ChordCapitalisationMode
 
     // Computed property for sorting
     var usageCountForSorting: Int {
         return usageCount ?? 0
     }
 
-    init(input: String, output: String, usageCount: Int? = nil) {
+    init(
+        input: String,
+        output: String,
+        usageCount: Int? = nil,
+        capitalisationMode: ChordCapitalisationMode = .default
+    ) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.input = input
         self.output = output
         self.usageCount = usageCount
+        self.capitalisationMode = capitalisationMode
         self.pipeNegativePosition = 0
         self.hasPipe = false
-        self.inputSorted = String(input.sorted())
 
         let decomposed = Self.decomposedOutput(for: output)
         if decomposed.invalid {
@@ -77,19 +113,22 @@ class Chord: Identifiable, ObservableObject {
     }
 
     /// Text to type and how many left-arrow presses follow, after expanding `{{date}}` tokens at fire time.
-    func resolvedTypingSegments(
+    func resolveTypingSegments(
         referenceDate: Date = Date(),
         capitalisationMode: CapitalisationMode = .off
     ) -> (segments: [String], leftArrowCount: Int) {
+        let effectiveCapitalisationMode: CapitalisationMode =
+            self.capitalisationMode == .alwaysOriginalCase ? .off : capitalisationMode
+
         let decomposed = Self.decomposedOutput(for: output)
         if decomposed.invalid {
-            return (Self.capitalisedSegments(outputChunks, mode: capitalisationMode), pipeNegativePosition)
+            return (Self.capitalisedSegments(outputChunks, mode: effectiveCapitalisationMode), pipeNegativePosition)
         }
         let before = OutputPlaceholderExpansion.expand(decomposed.beforeCursor, referenceDate: referenceDate)
         let after = OutputPlaceholderExpansion.expand(decomposed.afterCursor, referenceDate: referenceDate)
         let merged = before + after
         let segments = merged.chunked(into: maximumOutputChunkLength)
-        return (Self.capitalisedSegments(segments, mode: capitalisationMode), after.count)
+        return (Self.capitalisedSegments(segments, mode: effectiveCapitalisationMode), after.count)
     }
 
     private static func capitalisedSegments(_ segments: [String], mode: CapitalisationMode) -> [String] {

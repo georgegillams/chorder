@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var creatingChord = false
     @State private var newChordInput = ""
     @State private var newChordOutput = ""
+    @State private var newChordCapitalisationMode: ChordCapitalisationMode = .default
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
@@ -122,6 +123,9 @@ struct SettingsView: View {
                         Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
                             TableColumn("Input combination", value: \.input)
                             TableColumn("Output", value: \.output)
+                            TableColumn("Capitalisation") { chord in
+                                Text(chord.capitalisationMode.tableLabel)
+                            }
                             TableColumn("Usage", value: \.usageCountForSorting) { chord in
                                 Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
                             }
@@ -289,6 +293,13 @@ struct SettingsView: View {
                     Text("Chord output")
                     TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
                         .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
+                    Picker("Capitalisation", selection: $newChordCapitalisationMode) {
+                        ForEach(ChordCapitalisationMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.bottom, 8)
                     Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|" + "\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple’s ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
                     HStack {
                         Spacer()
@@ -296,21 +307,27 @@ struct SettingsView: View {
                             creatingChord = false
                             newChordInput = ""
                             newChordOutput = ""
+                            newChordCapitalisationMode = .default
                         }) {
                             Text("Cancel").font(Font.caption)
                         }
                         Button(action: {
                             creatingChord = false
-                            appModel.appSettings.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
+                            appModel.appSettings.addChord(chord: Chord(
+                                input: newChordInput,
+                                output: newChordOutput,
+                                capitalisationMode: newChordCapitalisationMode
+                            ))
                             newChordInput = ""
-                            newChordOutput = "" 
+                            newChordOutput = ""
+                            newChordCapitalisationMode = .default
                         }) {
                             Text("Save").font(Font.caption)
                         }
                     }
                 }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
             }
-        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
+        }.frame(minWidth: 640, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
 
     }
 }
