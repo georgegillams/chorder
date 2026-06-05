@@ -8,9 +8,90 @@
 import SwiftUI
 import LaunchAtLogin
 
-private enum ChordEditorContext {
+private enum ChordEditorContext: Identifiable {
     case create
     case edit(Chord.ID)
+
+    var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let chordID):
+            return "edit-\(chordID)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .create:
+            return "New chord"
+        case .edit:
+            return "Edit chord"
+        }
+    }
+}
+
+private struct ChordEditorSheet: View {
+    let context: ChordEditorContext
+    @Binding var input: String
+    @Binding var output: String
+    @Binding var capitalisationMode: ChordCapitalisationMode
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case input
+        case output
+    }
+
+    private var tipText: String {
+        "Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\|\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple's ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year."
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(context.title)
+                .font(.headline)
+
+            Form {
+                TextField("Chord input", text: $input)
+                    .focused($focusedField, equals: .input)
+                TextField("Chord output", text: $output)
+                    .focused($focusedField, equals: .output)
+                Picker("Capitalisation", selection: $capitalisationMode) {
+                    ForEach(ChordCapitalisationMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            Text(tipText)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: onSave)
+                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut("s", modifiers: .command)
+            }
+        }
+        .padding()
+        .frame(minWidth: 420)
+        .accessibilityAddTraits(.isModal)
+        .onAppear {
+            focusedField = .input
+        }
+        .onExitCommand {
+            onCancel()
+        }
+    }
 }
 
 struct SettingsView: View {
@@ -62,19 +143,6 @@ struct SettingsView: View {
         }
 
         return chords
-    }
-
-    private var isChordEditorPresented: Bool {
-        chordEditorContext != nil
-    }
-
-    private var chordEditorTitle: String {
-        switch chordEditorContext {
-        case .create, nil:
-            return "New chord"
-        case .edit:
-            return "Edit chord"
-        }
     }
 
     private func openCreateChordEditor() {
@@ -167,8 +235,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 40) {
+        VStack(alignment: .leading, spacing: 40) {
                 // TODO: Statistics
 
                 // Chords
@@ -389,38 +456,20 @@ struct SettingsView: View {
                         }
                     }
                 }
-            }.padding(.all, 8).padding(.bottom, 20).blur(radius: isChordEditorPresented ? 50 : 0.0)
-
-            if isChordEditorPresented {
-                VStack(alignment: .leading) {
-                    Text(chordEditorTitle).font(.headline).padding(.bottom,8)
-                    Text("Chord input")
-                    TextField("Chord input", text: $chordFormInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Text("Chord output")
-                    TextField("Chord output", text: $chordFormOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Picker("Capitalisation", selection: $chordFormCapitalisationMode) {
-                        ForEach(ChordCapitalisationMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .padding(.bottom, 8)
-                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|" + "\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple’s ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
-                    HStack {
-                        Spacer()
-                        Button(action: dismissChordEditor) {
-                            Text("Cancel").font(Font.caption)
-                        }
-                        Button(action: saveChordEditor) {
-                            Text("Save").font(Font.caption)
-                        }
-                    }
-                }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
-            }
-        }.frame(minWidth: 640, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
-
+        }
+        .padding(.all, 8)
+        .padding(.bottom, 20)
+        .frame(minWidth: 640, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
+        .sheet(item: $chordEditorContext) { context in
+            ChordEditorSheet(
+                context: context,
+                input: $chordFormInput,
+                output: $chordFormOutput,
+                capitalisationMode: $chordFormCapitalisationMode,
+                onSave: saveChordEditor,
+                onCancel: dismissChordEditor
+            )
+        }
     }
 }
 
