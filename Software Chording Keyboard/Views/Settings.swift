@@ -8,6 +8,10 @@
 import SwiftUI
 import LaunchAtLogin
 
+private extension Font {
+    static let settingsSecondary = Font.callout
+}
+
 private enum ChordEditorContext: Identifiable {
     case create
     case edit(Chord.ID)
@@ -69,7 +73,7 @@ private struct ChordEditorSheet: View {
             .formStyle(.grouped)
 
             Text(tipText)
-                .font(.caption)
+                .font(.settingsSecondary)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -200,7 +204,7 @@ struct SettingsView: View {
         let plain = "💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!"
         if let backupLocation = appModel.appSettings.settingsFileDirectory {
             Text(attributedConfigFileEditTip(plain: plain, backupLocation: backupLocation))
-                .font(.caption)
+                .font(.settingsSecondary)
                 .foregroundColor(.secondary)
                 .environment(\.openURL, OpenURLAction { _ in
                     revealSettingsFileInFinder()
@@ -208,7 +212,7 @@ struct SettingsView: View {
                 })
         } else {
             Text(plain)
-                .font(.caption)
+                .font(.settingsSecondary)
                 .foregroundColor(.secondary)
         }
     }
@@ -279,7 +283,7 @@ struct SettingsView: View {
                                 }
                             }) {
                                 Text("Reset sorting")
-                                    .font(.caption)
+                                    .font(.settingsSecondary)
                                     .foregroundColor(.accentColor)
                             }
                             .buttonStyle(.plain)
@@ -351,7 +355,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Chord hold delay")
-                            Text("Note they delay in ms must be smaller than the key repeat delay in your system settings, otherwise the chords will not work properly.").font(.caption).foregroundColor(.secondary)
+                            Text("Note they delay in ms must be smaller than the key repeat delay in your system settings, otherwise the chords will not work properly.").font(.settingsSecondary).foregroundColor(.secondary)
                         }
                         Spacer()
                         TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
@@ -359,7 +363,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Use Accessibility API for replacement")
-                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal).").font(.caption).foregroundColor(.secondary)
+                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal).").font(.settingsSecondary).foregroundColor(.secondary)
                         }
                         Spacer()
                         Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {}.toggleStyle(.switch)
@@ -372,7 +376,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Launch at log in")
-                            Text("Automatically start this app when you login so that you're always ready to get chording!").font(.caption).foregroundColor(.secondary)
+                            Text("Automatically start this app when you login so that you're always ready to get chording!").font(.settingsSecondary).foregroundColor(.secondary)
                         }
                         Spacer()
                         Toggle(isOn: $isChecked) {}.toggleStyle(.switch).onChange(of: isChecked){ value in
@@ -382,7 +386,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Settings backup location")
-                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they're never lost!").font(.caption).foregroundColor(.secondary)
+                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they're never lost!").font(.settingsSecondary).foregroundColor(.secondary)
 
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -390,14 +394,14 @@ struct SettingsView: View {
                         Button(action: {
                             delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
                         }) {
-                            Text(appModel.appSettings.settingsFileDirectory != nil ? "Change backup location" : "Choose backup location").font(Font.caption)
+                            Text(appModel.appSettings.settingsFileDirectory != nil ? "Change backup location" : "Choose backup location").font(.settingsSecondary)
                         }
 
                     }
                     if let backupLocation = appModel.appSettings.settingsFileDirectory {
                         Button(action: revealSettingsFileInFinder) {
                             Text("Current location: \(backupLocation.path)")
-                                .font(.caption)
+                                .font(.settingsSecondary)
                                 .foregroundColor(.accentColor)
                                 .multilineTextAlignment(.leading)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -410,13 +414,13 @@ struct SettingsView: View {
                 // Permissions
                 VStack(alignment: .leading) {
                     Text("Permissions").font(.headline)
-                    Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.").font(.caption).foregroundColor(.secondary).padding(.bottom, 8)
+                    Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.").font(.settingsSecondary).foregroundColor(.secondary).padding(.bottom, 8)
 
                     // Input Monitoring
                     HStack {
                         HStack {
                             Text("Input monitoring")
-                            Text(delegate.hasInputMonitoringPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasInputMonitoringPermission() ? .green : .red)
+                            Text(delegate.hasInputMonitoringPermission() ? "OK" : "Lacking permissions").font(.settingsSecondary).foregroundColor(delegate.hasInputMonitoringPermission() ? .green : .red)
                         }
                         Spacer()
                         if !delegate.hasInputMonitoringPermission() {
@@ -424,13 +428,13 @@ struct SettingsView: View {
                                 delegate.requestInputMonitoringPermission()
                                 delegate.openInputMonitoringSettings()
                             }) {
-                                Text("Grant permission").font(Font.caption)
+                                Text("Grant permission").font(.settingsSecondary)
                             }
                         }
                         Button(action: {
                             delegate.openInputMonitoringSettings()
                         }) {
-                            Text("Open settings").font(Font.caption)
+                            Text("Open settings").font(.settingsSecondary)
                         }
                     }.padding(.bottom, 8)
 
@@ -438,7 +442,7 @@ struct SettingsView: View {
                     HStack {
                         HStack {
                             Text("Accessibility")
-                            Text(delegate.hasAccessibilityPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasAccessibilityPermission() ? .green : .red)
+                            Text(delegate.hasAccessibilityPermission() ? "OK" : "Lacking permissions").font(.settingsSecondary).foregroundColor(delegate.hasAccessibilityPermission() ? .green : .red)
                         }
                         Spacer()
                         if !delegate.hasAccessibilityPermission() {
@@ -446,13 +450,13 @@ struct SettingsView: View {
                                 delegate.requestAccessibilityPermission()
                                 delegate.openAccessibilitySettings()
                             }) {
-                                Text("Grant permission").font(Font.caption)
+                                Text("Grant permission").font(.settingsSecondary)
                             }
                         }
                         Button(action: {
                             delegate.openAccessibilitySettings()
                         }) {
-                            Text("Open settings").font(Font.caption)
+                            Text("Open settings").font(.settingsSecondary)
                         }
                     }
                 }
