@@ -22,6 +22,9 @@
 		08E19F2829DF11FC0081AB4E /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19F2729DF11FC0081AB4E /* AppModel.swift */; };
 		08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE66FF29E9584000F4A6E5 /* BookMarks.swift */; };
 		A1B2C3D42DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */; };
+		B2C3D4E62DA6B2D200B360A2 /* MachineIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */; };
+		C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */; };
+		D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +64,9 @@
 		08E19F2729DF11FC0081AB4E /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		08EE66FF29E9584000F4A6E5 /* BookMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookMarks.swift; sourceTree = "<group>"; };
 		A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPlaceholderExpansion.swift; sourceTree = "<group>"; };
+		B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIdentifier.swift; sourceTree = "<group>"; };
+		C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordUsageStats.swift; sourceTree = "<group>"; };
+		D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMigration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +172,9 @@
 				08E19F2729DF11FC0081AB4E /* AppModel.swift */,
 				08EE66FF29E9584000F4A6E5 /* BookMarks.swift */,
 				A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */,
+				B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */,
+				C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */,
+				D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -323,6 +332,9 @@
 				086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */,
 				081B0B0929E431550052A0BD /* Constants.swift in Sources */,
 				A1B2C3D42DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift in Sources */,
+				B2C3D4E62DA6B2D200B360A2 /* MachineIdentifier.swift in Sources */,
+				C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */,
+				D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

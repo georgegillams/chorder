@@ -5,22 +5,191 @@
 //  Created by George Gillams on 05/04/2023.
 //
 
+import AppKit
 import SwiftUI
 import LaunchAtLogin
+
+private extension Font {
+    static let settingsSecondary = Font.callout
+    static let settingsHint = Font.footnote
+}
+
+private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
+    case chords
+    case settings
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .chords:
+            return "Chords"
+        case .settings:
+            return "Settings"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .chords:
+            return "list.bullet.rectangle"
+        case .settings:
+            return "gearshape"
+        }
+    }
+}
+
+private enum ChordEditorContext: Identifiable {
+    case create
+    case edit(Chord.ID)
+
+    var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let chordID):
+            return "edit-\(chordID)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .create:
+            return "New chord"
+        case .edit:
+            return "Edit chord"
+        }
+    }
+}
+
+private struct ChordEditorSheet: View {
+    let context: ChordEditorContext
+    @Binding var input: String
+    @Binding var output: String
+    @Binding var capitalisationMode: ChordCapitalisationMode
+    @Binding var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+    @Binding var showInputConflictConfirmation: Bool
+    let inputConflictTitle: String
+    let inputConflictMessage: String
+    let onSave: () -> Void
+    let onReplaceConflict: () -> Void
+    let onCancel: () -> Void
+
+    @FocusState private var focusedField: Field?
+    @State private var showOutputTips = false
+
+    private enum Field {
+        case input
+        case output
+    }
+
+    private var tipText: String {
+        "Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\n\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, escape it with a backslash: \\|\n\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple's ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year."
+    }
+
+    private var outputTipsButton: some View {
+        Button {
+            showOutputTips.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Output tips")
+        .accessibilityLabel("Show output tips")
+        .popover(isPresented: $showOutputTips, arrowEdge: .bottom) {
+            ScrollView {
+                Text(tipText)
+                    .font(.settingsHint)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(width: 320, alignment: .leading)
+            .padding()
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(context.title)
+                .font(.headline)
+
+            Form {
+                TextField("Chord input", text: $input)
+                    .focused($focusedField, equals: .input)
+                LabeledContent {
+                    TextField("", text: $output)
+                        .focused($focusedField, equals: .output)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Chord output")
+                        outputTipsButton
+                    }
+                }
+                Picker("Capitalisation", selection: $capitalisationMode) {
+                    ForEach(ChordCapitalisationMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                Picker("Space before output", selection: $spaceBeforeOutputMode) {
+                    ForEach(ChordSpaceBeforeOutputMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .padding(.horizontal, -20)
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: onSave)
+                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut("s", modifiers: .command)
+                    .confirmationDialog(
+                        inputConflictTitle,
+                        isPresented: $showInputConflictConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Replace", action: onReplaceConflict)
+                    } message: {
+                        Text(inputConflictMessage)
+                    }
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 420, maxWidth: .infinity, alignment: .leading)
+        .accessibilityAddTraits(.isModal)
+        .onAppear {
+            focusedField = .input
+        }
+        .onExitCommand {
+            onCancel()
+        }
+    }
+}
 
 struct SettingsView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
     @ObservedObject var appModel: AppModel
     @State private var selectedChords = Set<Chord.ID>()
-    @State private var creatingChord = false
-    @State private var newChordInput = ""
-    @State private var newChordOutput = ""
+    @State private var chordEditorContext: ChordEditorContext?
+    @State private var chordFormInput = ""
+    @State private var chordFormOutput = ""
+    @State private var chordFormCapitalisationMode: ChordCapitalisationMode = .default
+    @State private var chordFormSpaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
+    @FocusState private var isFilterFieldFocused: Bool
     @State private var sortOrder: [KeyPathComparator<Chord>] = []
     @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
-
+    @State private var selectedSidebarItem: SettingsSidebarItem? = .chords
+    @State private var showDeleteChordsConfirmation = false
+    @State private var showChordInputConflictConfirmation = false
+    @State private var conflictingChordForSave: Chord?
 
     init(appModel: AppModel) {
         self.appModel = appModel
@@ -42,8 +211,8 @@ struct SettingsView: View {
                 let outputMatches = chord.output.lowercased().contains(filterText)
 
                 // Check if input (sorted alphabetically) matches the filter (sorted alphabetically)
-                let sortedInput = String(chord.input.lowercased().sorted())
-                let sortedFilter = String(filterText.sorted())
+                let sortedInput = Chord.normalisedInputKey(for: chord.input)
+                let sortedFilter = Chord.normalisedInputKey(for: filterText)
                 let inputMatches = sortedInput.contains(sortedFilter)
 
                 return outputMatches || inputMatches
@@ -58,260 +227,652 @@ struct SettingsView: View {
         return chords
     }
 
-    var body: some View {
-        ZStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 40) {
-                // TODO: Statistics
+    private func openCreateChordEditor() {
+        chordFormInput = ""
+        chordFormOutput = ""
+        chordFormCapitalisationMode = .default
+        chordFormSpaceBeforeOutputMode = .default
+        chordEditorContext = .create
+    }
 
-                // Chords
-                VStack(alignment: .leading) {
-                    // Title and Filter UI on same line
-                    HStack {
-                        Text("Chords").font(.headline)
+    private func openEditChordEditor(for id: Chord.ID) {
+        guard let chord = appModel.appSettings.chords.first(where: { $0.id == id }) else {
+            return
+        }
+        selectedChords = [id]
+        chordFormInput = chord.input
+        chordFormOutput = chord.output
+        chordFormCapitalisationMode = chord.capitalisationMode
+        chordFormSpaceBeforeOutputMode = chord.spaceBeforeOutputMode
+        chordEditorContext = .edit(id)
+    }
 
-                        Spacer()
+    private func editSelectedChord() {
+        guard let id = selectedChords.first, selectedChords.count == 1 else {
+            return
+        }
+        openEditChordEditor(for: id)
+    }
 
-                        if showFilterInput {
-                            TextField("Filter chords...", text: $filterString)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(maxWidth: 200)
-                                .transition(.move(edge: .trailing).combined(with: .opacity))
-                        }
+    private var deleteChordsConfirmationTitle: String {
+        if selectedChords.count == 1,
+           let chord = appModel.appSettings.chords.first(where: { selectedChords.contains($0.id) }) {
+            return "Delete “\(chord.input) → \(chord.output)”?"
+        }
+        return "Delete \(selectedChords.count) chords?"
+    }
 
+    private var deleteChordsConfirmationMessage: String {
+        if selectedChords.count == 1 {
+            return "This chord will be removed from your configuration. This action cannot be undone."
+        }
+        return "These chords will be removed from your configuration. This action cannot be undone."
+    }
 
-                        // We can add esc and cmd+f keyboard shortcuts to toggle the filter input
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showFilterInput.toggle()
-                                if !showFilterInput {
-                                    filterString = ""
-                                }
-                            }
-                        }) {
-                            Image(systemName: showFilterInput ? "xmark.circle" : "line.3.horizontal.decrease.circle")
-                                .foregroundColor(showFilterInput ? .accentColor : .secondary)
-                        }.padding(.leading, 4)
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("filter")
-                            .help("Filter chords")
+    private func deleteSelectedChords() {
+        appModel.appSettings.removeChords(chords: selectedChords)
+        selectedChords.removeAll()
+    }
 
-                        // Reset sorting button - shown when custom sorting is active
-                        if hasCustomSorting {
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    sortOrder = []
-                                    previousSortOrder = []
-                                }
-                            }) {
-                                Text("Reset sorting")
-                                    .font(.caption)
-                                    .foregroundColor(.accentColor)
-                            }
-                            .buttonStyle(.plain)
-                            .help("Reset table sorting")
-                            .padding(.leading, 4)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
-                        }
-                    }
-                    .frame(minHeight: 22)
-                    .padding(.bottom, 4)
+    private func dismissChordEditor() {
+        chordEditorContext = nil
+        chordFormInput = ""
+        chordFormOutput = ""
+        chordFormCapitalisationMode = .default
+        chordFormSpaceBeforeOutputMode = .default
+        conflictingChordForSave = nil
+        showChordInputConflictConfirmation = false
+    }
 
+    private func revealSettingsFileInFinder() {
+        guard let directory = appModel.appSettings.settingsFileDirectory else {
+            return
+        }
+        let settingsFilePath = appModel.appSettings.settingsFileLocation.path
+        NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directory.path)
+    }
 
+    private func backupLocationDisplayName(for directory: URL) -> String {
+        let path = directory.path
+        if path.contains("com~apple~CloudDocs") {
+            return "iCloud Drive/\(directory.lastPathComponent)"
+        }
+        let abbreviated = (path as NSString).abbreviatingWithTildeInPath
+        if abbreviated.count <= 36 {
+            return abbreviated
+        }
+        return "~/…/\(directory.lastPathComponent)"
+    }
 
-                    VStack(alignment: .leading, spacing: 0) {
-                        Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
-                            TableColumn("Input combination", value: \.input)
-                            TableColumn("Output", value: \.output)
-                            TableColumn("Usage", value: \.usageCountForSorting) { chord in
-                                Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
-                            }
-                        }
-                        .onChange(of: sortOrder) { newSortOrder in
-                            // Handle special case: first click on Usage should cause sorting in descending (high to low) order
-                            if let newComparator = newSortOrder.first,
-                               newComparator.keyPath == \Chord.usageCountForSorting,
-                               newComparator.order == .forward {
-                                // Check if we're switching from no sort or different column to Usage
-                                let wasUsageSorted = previousSortOrder.first?.keyPath == \Chord.usageCountForSorting
-                                if !wasUsageSorted {
-                                    // Override to descending for first Usage click
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        sortOrder = [KeyPathComparator(\Chord.usageCountForSorting, order: .reverse)]
-                                    }
-                                }
-                            }
-                            // Update previous sort order for next time
-                            previousSortOrder = newSortOrder
-                        }
-                        HStack(spacing:0) {
-                            Button(action: {
-                                creatingChord = true
-                            }) {
-                                Text("+").font(.title2)
-                            }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
-                            Button(action: {
-                                appModel.appSettings.removeChords(chords: selectedChords)
-                                selectedChords.removeAll()
-                            }) {
-                                Text("-").font(.title2)
-                            }.buttonStyle(.borderless).frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20).disabled(selectedChords.isEmpty)
-                            Spacer()
-                        }.padding(.horizontal, 8).padding(.vertical, 4).frame(minWidth: 10, maxWidth: .infinity).background(.background)
-                    }.cornerRadius(8)
-                    Text("Note: Usage counts may not update until preferences are closed and re-opened, due to a rendering bug.").font(.caption).foregroundColor(.secondary).padding(.bottom, 4)
-                    Text("💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!").font(.caption).foregroundColor(.secondary)
-                }
+    private func attributedConfigFileEditTip(plain: String, backupLocation: URL) -> AttributedString {
+        var attributed = AttributedString(plain)
+        if let range = attributed.range(of: "your config") {
+            attributed[range].link = backupLocation
+            attributed[range].foregroundColor = .accentColor
+            attributed[range].underlineStyle = .single
+        }
+        return attributed
+    }
 
-                // Input
-                VStack(alignment: .leading) {
-                    Text("Input").font(.headline)
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Chord hold delay")
-                            Text("Note they delay in ms must be smaller than the key repeat delay in your system settings, otherwise the chords will not work properly.").font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        TextField("Chord hold delay", text: $appModel.appSettings.millisecondsToHoldStr).textFieldStyle(.plain).padding(.vertical, 6).padding(.horizontal, 4).background(.background).cornerRadius(6).frame(maxWidth: 60).multilineTextAlignment(.center)
-                    }.padding(.bottom, 8)
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Use Accessibility API for replacement")
-                            Text("When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal).").font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {}.toggleStyle(.switch)
-                    }
-                }
+    @ViewBuilder
+    private var configFileEditTip: some View {
+        let plain = "💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!"
+        if let backupLocation = appModel.appSettings.settingsFileDirectory {
+            Text(attributedConfigFileEditTip(plain: plain, backupLocation: backupLocation))
+                .font(.settingsSecondary)
+                .foregroundColor(.secondary)
+                .environment(\.openURL, OpenURLAction { _ in
+                    revealSettingsFileInFinder()
+                    return .handled
+                })
+        } else {
+            Text(plain)
+                .font(.settingsSecondary)
+                .foregroundColor(.secondary)
+        }
+    }
 
-                // Configuration
-                VStack(alignment: .leading) {
-                    Text("Configuration").font(.headline)
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Launch at log in")
-                            Text("Automatically start this app when you login so that you're always ready to get chording!").font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Toggle(isOn: $isChecked) {}.toggleStyle(.switch).onChange(of: isChecked){ value in
-                            LaunchAtLogin.isEnabled = value
-                        }
-                    }.padding(.bottom, 8)
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Settings backup location")
-                            Text("Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox to ensure they're never lost!").font(.caption).foregroundColor(.secondary)
+    private var chordEditorExcludingID: Chord.ID? {
+        if case .edit(let id) = chordEditorContext {
+            return id
+        }
+        return nil
+    }
 
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        Spacer()
-                        Button(action: {
-                            delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
-                        }) {
-                            Text(appModel.appSettings.settingsFileDirectory != nil ? "Change backup location" : "Choose backup location").font(Font.caption)
-                        }
+    private var chordInputConflictTitle: String {
+        "Replace existing chord?"
+    }
 
-                    }
-                    if let backupLocation = appModel.appSettings.settingsFileDirectory {
-                        Button(action: {
-                            let settingsFilePath = appModel.appSettings.settingsFileLocation.path
-                            let directoryPath = appModel.appSettings.settingsFileDirectory!.path
-                            NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directoryPath)
-                        }) {
-                            Text("Current location: \(backupLocation.path)")
-                                .font(.caption)
-                                .foregroundColor(.accentColor)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .buttonStyle(.plain)
+    private var chordInputConflictMessage: String {
+        guard let conflict = conflictingChordForSave else {
+            return ""
+        }
+        return "Another chord already uses this input combination (\(conflict.input) → \(conflict.output)). Replace it with what you entered, or cancel to keep editing."
+    }
 
-                    }
-                }
-
-                // Permissions
-                VStack(alignment: .leading) {
-                    Text("Permissions").font(.headline)
-                    Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.").font(.caption).foregroundColor(.secondary).padding(.bottom, 8)
-
-                    // Input Monitoring
-                    HStack {
-                        HStack {
-                            Text("Input monitoring")
-                            Text(delegate.hasInputMonitoringPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasInputMonitoringPermission() ? .green : .red)
-                        }
-                        Spacer()
-                        if !delegate.hasInputMonitoringPermission() {
-                            Button(action: {
-                                delegate.requestInputMonitoringPermission()
-                                delegate.openInputMonitoringSettings()
-                            }) {
-                                Text("Grant permission").font(Font.caption)
-                            }
-                        }
-                        Button(action: {
-                            delegate.openInputMonitoringSettings()
-                        }) {
-                            Text("Open settings").font(Font.caption)
-                        }
-                    }.padding(.bottom, 8)
-
-                    // Accessibility
-                    HStack {
-                        HStack {
-                            Text("Accessibility")
-                            Text(delegate.hasAccessibilityPermission() ? "OK" : "Lacking permissions").font(.caption).foregroundColor(delegate.hasAccessibilityPermission() ? .green : .red)
-                        }
-                        Spacer()
-                        if !delegate.hasAccessibilityPermission() {
-                            Button(action: {
-                                delegate.requestAccessibilityPermission()
-                                delegate.openAccessibilitySettings()
-                            }) {
-                                Text("Grant permission").font(Font.caption)
-                            }
-                        }
-                        Button(action: {
-                            delegate.openAccessibilitySettings()
-                        }) {
-                            Text("Open settings").font(Font.caption)
-                        }
-                    }
-                }
-            }.padding(.all, 8).padding(.bottom, 20).blur(radius: creatingChord ? 50 : 0.0)
-
-            // Create
-            if(creatingChord) {
-                VStack(alignment: .leading) {
-                    Text("New chord").font(.headline).padding(.bottom,8)
-                    Text("Chord input")
-                    TextField("Chord input", text: $newChordInput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Text("Chord output")
-                    TextField("Chord output", text: $newChordOutput).cornerRadius(4).overlay(RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary, lineWidth: 0.1)).padding(.bottom,8)
-                    Text("Tip: Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, then escape it by entering a backslash before: \\" + "|" + "\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple’s ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.").font(.caption).foregroundColor(.secondary).padding(.bottom,8)
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            creatingChord = false
-                            newChordInput = ""
-                            newChordOutput = ""
-                        }) {
-                            Text("Cancel").font(Font.caption)
-                        }
-                        Button(action: {
-                            creatingChord = false
-                            appModel.appSettings.addChord(chord: Chord(input: newChordInput, output: newChordOutput))
-                            newChordInput = ""
-                            newChordOutput = "" 
-                        }) {
-                            Text("Save").font(Font.caption)
-                        }
-                    }
-                }.padding(20).background(.background).cornerRadius(6).padding(20).frame(maxWidth: 340)
+    private func conflictingChord(for input: String, excludingId: Chord.ID?) -> Chord? {
+        let key = Chord.normalisedInputKey(for: input)
+        guard !key.isEmpty else {
+            return nil
+        }
+        return appModel.appSettings.chords.first { chord in
+            if chord.id == excludingId {
+                return false
             }
-        }.frame(minWidth: 500, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity, alignment: .center)
+            return Chord.normalisedInputKey(for: chord.input) == key
+        }
+    }
 
+    private func commitChordEditor(replacingExistingId existingId: Chord.ID?) {
+        switch chordEditorContext {
+        case .create:
+            if let existingId {
+                appModel.appSettings.updateChord(
+                    id: existingId,
+                    input: chordFormInput,
+                    output: chordFormOutput,
+                    capitalisationMode: chordFormCapitalisationMode,
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+                )
+            } else {
+                appModel.appSettings.addChord(chord: Chord(
+                    input: chordFormInput,
+                    output: chordFormOutput,
+                    capitalisationMode: chordFormCapitalisationMode,
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+                ))
+            }
+        case .edit(let editingId):
+            let targetId = existingId ?? editingId
+            appModel.appSettings.updateChord(
+                id: targetId,
+                input: chordFormInput,
+                output: chordFormOutput,
+                capitalisationMode: chordFormCapitalisationMode,
+                spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+            )
+        case nil:
+            return
+        }
+        conflictingChordForSave = nil
+        dismissChordEditor()
+    }
+
+    private func saveChordEditor() {
+        if let conflict = conflictingChord(for: chordFormInput, excludingId: chordEditorExcludingID) {
+            conflictingChordForSave = conflict
+            showChordInputConflictConfirmation = true
+            return
+        }
+        commitChordEditor(replacingExistingId: nil)
+    }
+
+    private func replaceConflictingChord() {
+        guard let conflict = conflictingChordForSave else {
+            return
+        }
+        commitChordEditor(replacingExistingId: conflict.id)
+    }
+
+    var body: some View {
+        NavigationSplitView {
+            List(SettingsSidebarItem.allCases, selection: $selectedSidebarItem) { item in
+                Label(item.title, systemImage: item.systemImage)
+                    .tag(item)
+            }
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
+        } detail: {
+            Group {
+                switch selectedSidebarItem {
+                case .chords:
+                    chordsPanel
+                case .settings:
+                    generalSettingsPanel
+                case .none:
+                    VStack(spacing: 12) {
+                        Image(systemName: "sidebar.left")
+                            .font(.largeTitle)
+                            .foregroundColor(.secondary)
+                        Text("Select a section")
+                            .font(.headline)
+                        Text("Choose Chords or Settings from the sidebar.")
+                            .font(.settingsSecondary)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(
+            minWidth: 720,
+            idealWidth: 960,
+            maxWidth: .infinity,
+            minHeight: 500,
+            idealHeight: 720,
+            maxHeight: .infinity
+        )
+        .sheet(item: $chordEditorContext) { context in
+            ChordEditorSheet(
+                context: context,
+                input: $chordFormInput,
+                output: $chordFormOutput,
+                capitalisationMode: $chordFormCapitalisationMode,
+                spaceBeforeOutputMode: $chordFormSpaceBeforeOutputMode,
+                showInputConflictConfirmation: $showChordInputConflictConfirmation,
+                inputConflictTitle: chordInputConflictTitle,
+                inputConflictMessage: chordInputConflictMessage,
+                onSave: saveChordEditor,
+                onReplaceConflict: replaceConflictingChord,
+                onCancel: dismissChordEditor
+            )
+        }
+    }
+
+    private var chordsPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if showFilterInput {
+                HStack {
+                    TextField("Filter chords...", text: $filterString)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($isFilterFieldFocused)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showFilterInput = false
+                            filterString = ""
+                            isFilterFieldFocused = false
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear filter")
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    DispatchQueue.main.async {
+                        isFilterFieldFocused = true
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
+                    TableColumn("Input combination", value: \.input) { chord in
+                        Text(chord.input)
+                    }
+                    TableColumn("Output", value: \.output) { chord in
+                        Text(chord.output)
+                    }
+                    TableColumn("Capitalisation") { chord in
+                        Text(chord.capitalisationMode.tableLabel)
+                    }
+                    TableColumn("Space") { chord in
+                        Text(chord.spaceBeforeOutputMode.tableLabel)
+                    }
+                    TableColumn("Usage", value: \.usageCountForSorting) { chord in
+                        Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    TableDoubleClickHandler { row in
+                        guard filteredChords.indices.contains(row) else {
+                            return
+                        }
+                        openEditChordEditor(for: filteredChords[row].id)
+                    }
+                }
+                .onChange(of: sortOrder) { newSortOrder in
+                    if let newComparator = newSortOrder.first,
+                       newComparator.keyPath == \Chord.usageCountForSorting,
+                       newComparator.order == .forward {
+                        let wasUsageSorted = previousSortOrder.first?.keyPath == \Chord.usageCountForSorting
+                        if !wasUsageSorted {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                sortOrder = [KeyPathComparator(\Chord.usageCountForSorting, order: .reverse)]
+                            }
+                        }
+                    }
+                    previousSortOrder = newSortOrder
+                }
+
+                HStack(spacing: 0) {
+                    Button(action: openCreateChordEditor) {
+                        Text("+").font(.title2)
+                    }
+                    .buttonStyle(.borderless)
+                    .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                    Button(action: {
+                        showDeleteChordsConfirmation = true
+                    }) {
+                        Text("-").font(.title2)
+                    }
+                    .buttonStyle(.borderless)
+                    .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                    .disabled(selectedChords.isEmpty)
+                    .confirmationDialog(
+                        deleteChordsConfirmationTitle,
+                        isPresented: $showDeleteChordsConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete", role: .destructive, action: deleteSelectedChords)
+                    } message: {
+                        Text(deleteChordsConfirmationMessage)
+                    }
+                    Button(action: editSelectedChord) {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.borderless)
+                    .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                    .disabled(selectedChords.count != 1)
+                    .accessibilityLabel("Edit")
+                    .help("Edit")
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity)
+                .background(.background)
+            }
+            .cornerRadius(8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            configFileEditTip
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .navigationTitle("Chords")
+        .onChange(of: showFilterInput) { isShowing in
+            if isShowing {
+                DispatchQueue.main.async {
+                    isFilterFieldFocused = true
+                }
+            } else {
+                isFilterFieldFocused = false
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showFilterInput.toggle()
+                        if !showFilterInput {
+                            filterString = ""
+                        }
+                    }
+                }) {
+                    Image(systemName: showFilterInput ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel("Filter chords")
+                .help("Filter chords")
+            }
+
+            if hasCustomSorting {
+                ToolbarItem(placement: .automatic) {
+                    Button("Reset sorting") {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            sortOrder = []
+                            previousSortOrder = []
+                        }
+                    }
+                    .help("Reset table sorting")
+                }
+            }
+        }
+    }
+
+    private func settingsRowLabel(title: String, hint: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            Text(hint)
+                .font(.settingsHint)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var generalSettingsPanel: some View {
+        Form {
+            Section {
+                LabeledContent {
+                    TextField("", text: $appModel.appSettings.millisecondsToHoldStr)
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityLabel("Milliseconds")
+                } label: {
+                    settingsRowLabel(
+                        title: "Chord hold delay",
+                        hint: "Must be smaller than the key repeat delay in your system settings, otherwise chords will not work properly."
+                    )
+                }
+                Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {
+                    settingsRowLabel(
+                        title: "Use Accessibility API for replacement",
+                        hint: "When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal)."
+                    )
+                }
+            } header: {
+                Text("Input")
+            }
+
+            Section {
+                Toggle(isOn: $isChecked) {
+                    settingsRowLabel(
+                        title: "Launch at log in",
+                        hint: "Automatically start this app when you login so that you're always ready to get chording!"
+                    )
+                }
+                .onChange(of: isChecked) { value in
+                    LaunchAtLogin.isEnabled = value
+                }
+
+                LabeledContent {
+                    HStack(spacing: 12) {
+                        if let backupLocation = appModel.appSettings.settingsFileDirectory {
+                            Button(action: revealSettingsFileInFinder) {
+                                Text(backupLocationDisplayName(for: backupLocation))
+                            }
+                            .buttonStyle(.link)
+
+                            Button("Change…") {
+                                delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
+                            }
+                        } else {
+                            Text("Not set")
+                                .foregroundColor(.secondary)
+                            Button("Choose…") {
+                                delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
+                            }
+                        }
+                    }
+                } label: {
+                    settingsRowLabel(
+                        title: "Backup location",
+                        hint: "Choose a place for settings to be backed up inside a Cloud folder (eg iCloud/Dropbox) to ensure they're never lost."
+                    )
+                }
+            } header: {
+                Text("Configuration")
+            }
+
+
+
+            Section {
+                permissionRow(
+                    title: "Input monitoring",
+                    hasPermission: delegate.hasInputMonitoringPermission(),
+                    grantAction: {
+                        delegate.requestInputMonitoringPermission()
+                        delegate.openInputMonitoringSettings()
+                    },
+                    openSettingsAction: delegate.openInputMonitoringSettings
+                )
+
+                permissionRow(
+                    title: "Accessibility",
+                    hasPermission: delegate.hasAccessibilityPermission(),
+                    grantAction: {
+                        delegate.requestAccessibilityPermission()
+                        delegate.openAccessibilitySettings()
+                    },
+                    openSettingsAction: delegate.openAccessibilitySettings
+                )
+            } header: {
+                Text("Permissions")
+                Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 4)
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Settings")
+    }
+
+    private func permissionRow(
+        title: String,
+        hasPermission: Bool,
+        grantAction: @escaping () -> Void,
+        openSettingsAction: @escaping () -> Void
+    ) -> some View {
+        HStack {
+            Text(title)
+            Text(hasPermission ? "OK" : "Lacking permissions")
+                .font(.settingsSecondary)
+                .foregroundColor(hasPermission ? .green : .red)
+            Spacer()
+            if !hasPermission {
+                Button("Grant permission", action: grantAction)
+            }
+            Button("Open settings", action: openSettingsAction)
+        }
+    }
+}
+
+/// Observes double-clicks on the underlying `NSTableView` without intercepting single clicks.
+private struct TableDoubleClickHandler: NSViewRepresentable {
+    let onDoubleClick: (Int) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDoubleClick: onDoubleClick)
+    }
+
+    func makeNSView(context: Context) -> InstallerView {
+        let view = InstallerView()
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateNSView(_ nsView: InstallerView, context: Context) {
+        context.coordinator.onDoubleClick = onDoubleClick
+        nsView.coordinator = context.coordinator
+        nsView.installIfNeeded()
+    }
+
+    static func dismantleNSView(_ nsView: InstallerView, coordinator: Coordinator) {
+        coordinator.stopMonitoring()
+    }
+
+    final class Coordinator {
+        var onDoubleClick: (Int) -> Void
+        private var monitor: Any?
+        private weak var tableView: NSTableView?
+
+        init(onDoubleClick: @escaping (Int) -> Void) {
+            self.onDoubleClick = onDoubleClick
+        }
+
+        func startMonitoring(tableView: NSTableView) {
+            guard self.tableView !== tableView else {
+                return
+            }
+            stopMonitoring()
+            self.tableView = tableView
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                guard let self, let tableView = self.tableView else {
+                    return event
+                }
+                guard event.clickCount == 2, event.window === tableView.window else {
+                    return event
+                }
+                let point = tableView.convert(event.locationInWindow, from: nil)
+                guard tableView.bounds.contains(point) else {
+                    return event
+                }
+                let row = tableView.row(at: point)
+                guard row >= 0 else {
+                    return event
+                }
+                self.onDoubleClick(row)
+                return event
+            }
+        }
+
+        func stopMonitoring() {
+            if let monitor {
+                NSEvent.removeMonitor(monitor)
+                self.monitor = nil
+            }
+            tableView = nil
+        }
+
+        deinit {
+            stopMonitoring()
+        }
+    }
+
+    final class InstallerView: NSView {
+        weak var coordinator: Coordinator?
+        private weak var installedTableView: NSTableView?
+        private var installAttempts = 0
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            installIfNeeded()
+        }
+
+        func installIfNeeded() {
+            guard installedTableView == nil, let coordinator else {
+                return
+            }
+            guard installAttempts < 20 else {
+                return
+            }
+            installAttempts += 1
+
+            guard let tableView = findTableView() else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.installIfNeeded()
+                }
+                return
+            }
+
+            installedTableView = tableView
+            coordinator.startMonitoring(tableView: tableView)
+        }
+
+        private func findTableView() -> NSTableView? {
+            var current: NSView? = self
+            while let view = current {
+                if let tableView = searchForTableView(in: view) {
+                    return tableView
+                }
+                current = view.superview
+            }
+            return nil
+        }
+
+        private func searchForTableView(in view: NSView) -> NSTableView? {
+            if let tableView = view as? NSTableView {
+                return tableView
+            }
+            for subview in view.subviews {
+                if let tableView = searchForTableView(in: subview) {
+                    return tableView
+                }
+            }
+            return nil
+        }
     }
 }
 

@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-class AppSettings {
+class AppSettings: ObservableObject {
     private var initialisationComplete: Bool = false
     private var suppressWritingToFile: Bool = false
     @Published private(set) public var isDirty: Bool = false
@@ -38,14 +38,21 @@ class AppSettings {
 
     /* Storage */
     var bookmarks: BookMarks
+    let machineIdentifier: String
     var settingsFileDirectory: URL?
+    var settingsRootDirectory: URL {
+        settingsFileDirectory
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+    var statsDirectoryURL: URL {
+        ChordUsageStore.statsDirectory(in: settingsRootDirectory)
+    }
+    var localMachineStatsFileURL: URL {
+        ChordUsageStore.statsFileURL(for: machineIdentifier, in: settingsRootDirectory)
+    }
     var settingsFileLocation: URL {
         get {
-            if let directory = settingsFileDirectory {
-                return directory.appendingPathComponent("software_chording_keyboard_settings.json")
-            }
-
-            return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("software_chording_keyboard_settings.json")
+            settingsRootDirectory.appendingPathComponent("software_chording_keyboard_settings.json")
         }
     }
 
@@ -59,6 +66,8 @@ class AppSettings {
 
         settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
         gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
+        machineIdentifier = MachineIdentifier.current
+        gDebugPrint("Machine identifier: \(machineIdentifier)")
         bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
         readAppSettingsFromFile()
         initialisationComplete = true
@@ -72,6 +81,31 @@ class AppSettings {
         self.chords.removeAll(where: { chords.contains($0.id) })
     }
 
+    public func updateChord(
+        id: Chord.ID,
+        input: String,
+        output: String,
+        capitalisationMode: ChordCapitalisationMode,
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+    ) {
+        guard let index = chords.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        chords[index].update(
+            input: input,
+            output: output,
+            capitalisationMode: capitalisationMode,
+            spaceBeforeOutputMode: spaceBeforeOutputMode
+        )
+        recalculateAlphabeticalMapping()
+        writeAppSettingsToFile()
+    }
+
+    public func incrementUsage(for chord: Chord) {
+        chord.incrementUsageCount(for: machineIdentifier)
+        objectWillChange.send()
+    }
+
     func recalculateAlphabeticalMapping() {
         alphabeticalInputOutputMappingDictionary = [:]
         for chord in chords {
@@ -79,14 +113,22 @@ class AppSettings {
         }
     }
 
-    func deserialiseChords(serialisableChords: [[String: String]]) -> [Chord] {
-        var chords: [Chord] = []
-        for serialisableChord in serialisableChords {
-            chords.append(Chord(input: serialisableChord["input"] ?? "", output: serialisableChord["output"] ?? "",
-                                usageCount: Int(serialisableChord["usageCount"] ?? "0")
-                               ))
+    func deserialiseChords(serialisableChords: [SerialisableChord]) -> [Chord] {
+        serialisableChords.map { serialisableChord in
+            let capitalisationMode = ChordCapitalisationMode(
+                rawValue: serialisableChord.capitalisationMode ?? ""
+            ) ?? .default
+            let spaceBeforeOutputMode = ChordSpaceBeforeOutputMode(
+                rawValue: serialisableChord.spaceBeforeOutput ?? ""
+            ) ?? .default
+            return Chord(
+                id: serialisableChord.id,
+                input: serialisableChord.input,
+                output: serialisableChord.output,
+                capitalisationMode: capitalisationMode,
+                spaceBeforeOutputMode: spaceBeforeOutputMode
+            )
         }
-        return chords
     }
 
     func parseSettingsFromJson(json: String) {
@@ -102,16 +144,56 @@ class AppSettings {
         }
     }
 
-    func serialiseChords(chords: [Chord]) -> [[String: String]] {
-        var serialisableChords: [[String: String]] = []
-        for chord in chords {
-            serialisableChords.append(["input": chord.input, "output": chord.output, "usageCount": String(chord.usageCount ?? 0)])
+    func serialiseChords(chords: [Chord]) -> [SerialisableChord] {
+        chords.map { chord in
+            SerialisableChord(
+                id: chord.id,
+                input: chord.input,
+                output: chord.output,
+                capitalisationMode: chord.capitalisationMode.rawValue,
+                spaceBeforeOutput: chord.spaceBeforeOutputMode.rawValue
+            )
         }
-        return serialisableChords
+    }
+
+    func reloadUsageFromStatsDirectory() {
+        let usageByMachine = ChordUsageStore.loadAllMachineUsage(from: settingsRootDirectory)
+        for chord in chords {
+            var usageForChord: [String: Int] = [:]
+            for (machineId, usageByChordId) in usageByMachine {
+                if let count = usageByChordId[chord.id], count > 0 {
+                    usageForChord[machineId] = count
+                }
+            }
+            chord.usageByMachine = usageForChord
+        }
+        objectWillChange.send()
+    }
+
+    func writeLocalMachineStatsFile() {
+        var usageByChordId: [String: Int] = [:]
+        for chord in chords {
+            if let count = chord.usageByMachine[machineIdentifier], count > 0 {
+                usageByChordId[chord.id] = count
+            }
+        }
+
+        let incoming = MachineUsageStats(usageByChordId: usageByChordId)
+        let merged = ChordUsageStore.mergedUsageOnDisk(at: localMachineStatsFileURL, with: incoming)
+
+        do {
+            try ChordUsageStore.saveMachineUsage(merged, to: localMachineStatsFileURL)
+        } catch {
+            gDebugPrint("ERROR writing stats file \(error)")
+        }
     }
 
     func getSettingsJsonString() -> String{
-        let serialisableSettings = SerialisableAppSettings(millisecondsToHold: millisecondsToHoldStr, useAccessibilityAPI: useAccessibilityAPI, chords: serialiseChords(chords: chords))
+        let serialisableSettings = SerialisableAppSettings(
+            millisecondsToHold: millisecondsToHoldStr,
+            useAccessibilityAPI: useAccessibilityAPI,
+            chords: serialiseChords(chords: chords)
+        )
 
         let jsonEncoder = JSONEncoder()
         jsonEncoder.outputFormatting = .prettyPrinted
@@ -125,8 +207,6 @@ class AppSettings {
         }
     }
 
-    // TODO: Would be nice if this first re-reads usage numbers, and only overwrites if greater than existing value.
-    // TODO: That way, across multiple devices, usage won't get lost.
     func writeAppSettingsToFile() {
         if(!initialisationComplete || suppressWritingToFile) {
             return
@@ -158,10 +238,28 @@ class AppSettings {
             }
         }
 
+        let settingsFileChanged = SettingsMigration.run(on: self)
+        reloadUsageFromStatsDirectory()
         recalculateAlphabeticalMapping()
 
         suppressWritingToFile = false
+        if settingsFileChanged {
+            writeAppSettingsToFile()
+        }
         clearDirty()
+    }
+
+    /// Reloads settings and usage from disk, for example after iCloud sync from another machine.
+    func reloadFromSyncedStorage() {
+        guard initialisationComplete else {
+            return
+        }
+        if isDirty {
+            writeLocalMachineStatsFile()
+            clearDirty()
+        }
+        gDebugPrint("Reloading settings and usage from synced storage")
+        readAppSettingsFromFile()
     }
 
     func chooseBackupSettingsFileLocation() {
@@ -205,13 +303,14 @@ class AppSettings {
         settingsFileDirectory = newLocation
         UserDefaults.standard.set(newLocation, forKey: "settingsFileDirectory")
         bookmarks.store(url: newLocation)
+        reloadUsageFromStatsDirectory()
     }
 
-    public func setDirty() {
+    public func setUsageCountDirty() {
         isDirty = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
             if(self.isDirty && self.initialisationComplete && !self.suppressWritingToFile) {
-                self.writeAppSettingsToFile()
+                self.writeLocalMachineStatsFile()
                 self.clearDirty()
             }
         }
@@ -231,5 +330,36 @@ class AppSettings {
 struct SerialisableAppSettings: Codable {
     var millisecondsToHold: String
     var useAccessibilityAPI: Bool?  // optional so existing settings files without the key default to true
-    var chords: [[String: String]]
+    var chords: [SerialisableChord]
+}
+
+struct SerialisableChord: Codable {
+    var id: String
+    var input: String
+    var output: String
+    var capitalisationMode: String?
+    var spaceBeforeOutput: String?
+
+    init(
+        id: String,
+        input: String,
+        output: String,
+        capitalisationMode: String?,
+        spaceBeforeOutput: String? = nil
+    ) {
+        self.id = id
+        self.input = input
+        self.output = output
+        self.capitalisationMode = capitalisationMode
+        self.spaceBeforeOutput = spaceBeforeOutput
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        input = try container.decode(String.self, forKey: .input)
+        output = try container.decode(String.self, forKey: .output)
+        capitalisationMode = try container.decodeIfPresent(String.self, forKey: .capitalisationMode)
+        spaceBeforeOutput = try container.decodeIfPresent(String.self, forKey: .spaceBeforeOutput)
+    }
 }
