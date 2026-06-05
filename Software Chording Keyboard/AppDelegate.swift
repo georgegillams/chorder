@@ -549,6 +549,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
+
+        if ProcessInfo.processInfo.arguments.contains("G_DEBUG") {
+            showSettingsWindow()
+        }
     }
 
     func createStatusBarButton () {
@@ -585,28 +589,46 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         openMenu()
     }
 
+    private let settingsWindowDefaultSize = NSSize(width: 1200, height: 720)
+    private let settingsWindowMinimumSize = NSSize(width: 920, height: 450)
+
     @objc func showSettingsWindow () {
         windowsOpen += 1
         updateActivationPolicy()
 
         settingsUI = SettingsView(appModel: appModel)
-        if(settingsWindow == nil) {
-            settingsWindow = NSWindow(contentRect: NSMakeRect(0, 0, 640, 500), styleMask: [.closable, .titled, .resizable], backing: .buffered, defer: false)
+
+        if settingsWindow == nil {
+            settingsWindow = NSWindow(
+                contentRect: NSRect(origin: .zero, size: settingsWindowDefaultSize),
+                styleMask: [.closable, .titled, .resizable],
+                backing: .buffered,
+                defer: false
+            )
         }
 
-        if let window = settingsWindow {
-            window.isReleasedWhenClosed = false
-            window.contentView?.wantsLayer = true
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .visible
-            window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-            window.standardWindowButton(.zoomButton)?.isHidden = true
-            window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
-            window.contentViewController = NSHostingController(rootView: settingsUI)
-            window.delegate = self
-            window.center()
+        guard let window = settingsWindow else {
+            return
         }
+
+        window.isReleasedWhenClosed = false
+        window.contentView?.wantsLayer = true
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .visible
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.contentMinSize = settingsWindowMinimumSize
+        window.delegate = self
+
+        let hostingController = NSHostingController(rootView: settingsUI!)
+        if #available(macOS 13.0, *) {
+            hostingController.sizingOptions = [.minSize]
+        }
+        window.contentViewController = hostingController
+        window.setContentSize(settingsWindowDefaultSize)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 
     @objc func openMenu() {
