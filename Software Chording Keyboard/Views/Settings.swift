@@ -176,6 +176,7 @@ struct SettingsView: View {
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
+    @FocusState private var isFilterFieldFocused: Bool
     @State private var sortOrder: [KeyPathComparator<Chord>] = []
     @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
     @State private var selectedSidebarItem: SettingsSidebarItem? = .chords
@@ -459,10 +460,12 @@ struct SettingsView: View {
                 HStack {
                     TextField("Filter chords...", text: $filterString)
                         .textFieldStyle(.roundedBorder)
+                        .focused($isFilterFieldFocused)
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             showFilterInput = false
                             filterString = ""
+                            isFilterFieldFocused = false
                         }
                     }) {
                         Image(systemName: "xmark.circle.fill")
@@ -472,6 +475,11 @@ struct SettingsView: View {
                     .accessibilityLabel("Clear filter")
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    DispatchQueue.main.async {
+                        isFilterFieldFocused = true
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -558,6 +566,15 @@ struct SettingsView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .navigationTitle("Chords")
+        .onChange(of: showFilterInput) { isShowing in
+            if isShowing {
+                DispatchQueue.main.async {
+                    isFilterFieldFocused = true
+                }
+            } else {
+                isFilterFieldFocused = false
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: {
