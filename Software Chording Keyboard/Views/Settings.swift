@@ -5,6 +5,7 @@
 //  Created by George Gillams on 05/04/2023.
 //
 
+import AppKit
 import SwiftUI
 import LaunchAtLogin
 
@@ -165,6 +166,7 @@ struct SettingsView: View {
     @State private var sortOrder: [KeyPathComparator<Chord>] = []
     @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
     @State private var selectedSidebarItem: SettingsSidebarItem? = .chords
+    @State private var showDeleteChordsConfirmation = false
 
     init(appModel: AppModel) {
         self.appModel = appModel
@@ -225,6 +227,26 @@ struct SettingsView: View {
             return
         }
         openEditChordEditor(for: id)
+    }
+
+    private var deleteChordsConfirmationTitle: String {
+        if selectedChords.count == 1,
+           let chord = appModel.appSettings.chords.first(where: { selectedChords.contains($0.id) }) {
+            return "Delete “\(chord.input) → \(chord.output)”?"
+        }
+        return "Delete \(selectedChords.count) chords?"
+    }
+
+    private var deleteChordsConfirmationMessage: String {
+        if selectedChords.count == 1 {
+            return "This chord will be removed from your configuration. This action cannot be undone."
+        }
+        return "These chords will be removed from your configuration. This action cannot be undone."
+    }
+
+    private func deleteSelectedChords() {
+        appModel.appSettings.removeChords(chords: selectedChords)
+        selectedChords.removeAll()
     }
 
     private func dismissChordEditor() {
@@ -375,16 +397,28 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
-                    TableColumn("Input combination", value: \.input)
-                    TableColumn("Output", value: \.output)
+                    TableColumn("Input combination", value: \.input) { chord in
+                        Text(chord.input)
+                    }
+                    TableColumn("Output", value: \.output) { chord in
+                        Text(chord.output)
+                    }
                     TableColumn("Capitalisation") { chord in
                         Text(chord.capitalisationMode.tableLabel)
                     }
-                            TableColumn("Usage", value: \.usageCountForSorting) { chord in
-                                Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
-                            }
+                    TableColumn("Usage", value: \.usageCountForSorting) { chord in
+                        Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    TableDoubleClickHandler { row in
+                        guard filteredChords.indices.contains(row) else {
+                            return
+                        }
+                        openEditChordEditor(for: filteredChords[row].id)
+                    }
+                }
                 .onChange(of: sortOrder) { newSortOrder in
                     if let newComparator = newSortOrder.first,
                        newComparator.keyPath == \Chord.usageCountForSorting,
@@ -406,14 +440,22 @@ struct SettingsView: View {
                     .buttonStyle(.borderless)
                     .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
                     Button(action: {
-                        appModel.appSettings.removeChords(chords: selectedChords)
-                        selectedChords.removeAll()
+                        showDeleteChordsConfirmation = true
                     }) {
                         Text("-").font(.title2)
                     }
                     .buttonStyle(.borderless)
                     .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
                     .disabled(selectedChords.isEmpty)
+                    .confirmationDialog(
+                        deleteChordsConfirmationTitle,
+                        isPresented: $showDeleteChordsConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete", role: .destructive, action: deleteSelectedChords)
+                    } message: {
+                        Text(deleteChordsConfirmationMessage)
+                    }
                     Button(action: editSelectedChord) {
                         Image(systemName: "pencil")
                     }
@@ -590,6 +632,133 @@ struct SettingsView: View {
                 Button("Grant permission", action: grantAction)
             }
             Button("Open settings", action: openSettingsAction)
+        }
+    }
+}
+
+/// Observes double-clicks on the underlying `NSTableView` without intercepting single clicks.
+private struct TableDoubleClickHandler: NSViewRepresentable {
+    let onDoubleClick: (Int) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDoubleClick: onDoubleClick)
+    }
+
+    func makeNSView(context: Context) -> InstallerView {
+        let view = InstallerView()
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateNSView(_ nsView: InstallerView, context: Context) {
+        context.coordinator.onDoubleClick = onDoubleClick
+        nsView.coordinator = context.coordinator
+        nsView.installIfNeeded()
+    }
+
+    static func dismantleNSView(_ nsView: InstallerView, coordinator: Coordinator) {
+        coordinator.stopMonitoring()
+    }
+
+    final class Coordinator {
+        var onDoubleClick: (Int) -> Void
+        private var monitor: Any?
+        private weak var tableView: NSTableView?
+
+        init(onDoubleClick: @escaping (Int) -> Void) {
+            self.onDoubleClick = onDoubleClick
+        }
+
+        func startMonitoring(tableView: NSTableView) {
+            guard self.tableView !== tableView else {
+                return
+            }
+            stopMonitoring()
+            self.tableView = tableView
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                guard let self, let tableView = self.tableView else {
+                    return event
+                }
+                guard event.clickCount == 2, event.window === tableView.window else {
+                    return event
+                }
+                let point = tableView.convert(event.locationInWindow, from: nil)
+                guard tableView.bounds.contains(point) else {
+                    return event
+                }
+                let row = tableView.row(at: point)
+                guard row >= 0 else {
+                    return event
+                }
+                self.onDoubleClick(row)
+                return event
+            }
+        }
+
+        func stopMonitoring() {
+            if let monitor {
+                NSEvent.removeMonitor(monitor)
+                self.monitor = nil
+            }
+            tableView = nil
+        }
+
+        deinit {
+            stopMonitoring()
+        }
+    }
+
+    final class InstallerView: NSView {
+        weak var coordinator: Coordinator?
+        private weak var installedTableView: NSTableView?
+        private var installAttempts = 0
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            installIfNeeded()
+        }
+
+        func installIfNeeded() {
+            guard installedTableView == nil, let coordinator else {
+                return
+            }
+            guard installAttempts < 20 else {
+                return
+            }
+            installAttempts += 1
+
+            guard let tableView = findTableView() else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.installIfNeeded()
+                }
+                return
+            }
+
+            installedTableView = tableView
+            coordinator.startMonitoring(tableView: tableView)
+        }
+
+        private func findTableView() -> NSTableView? {
+            var current: NSView? = self
+            while let view = current {
+                if let tableView = searchForTableView(in: view) {
+                    return tableView
+                }
+                current = view.superview
+            }
+            return nil
+        }
+
+        private func searchForTableView(in view: NSView) -> NSTableView? {
+            if let tableView = view as? NSTableView {
+                return tableView
+            }
+            for subview in view.subviews {
+                if let tableView = searchForTableView(in: subview) {
+                    return tableView
+                }
+            }
+            return nil
         }
     }
 }
