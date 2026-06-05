@@ -32,6 +32,7 @@ import SwiftUI
  - [ ] The app periodically reloads usage data, in case it has changed on another machine
        - On wake
        - On interval
+ - [x] Debounce usage writes to file to prevent excessive cloud storage usage
 
  ## UI
  - [x] The current capitalisation mode is reflected in the menu-bar icon.
@@ -228,7 +229,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
                     self.replaceCharacters(chord: chord!)
                     self.appModel.appSettings.incrementUsage(for: chord!)
-                    self.appModel.appSettings.setDirty()
+                    self.appModel.appSettings.setUsageCountDirty()
                     self.capitalisationMode = .off
                     self.owedSpace = !chord!.hasPipe
 //                    self.charactersTypedSinceSpaceOwed = 0

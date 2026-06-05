@@ -380,9 +380,9 @@ struct SettingsView: View {
                     TableColumn("Capitalisation") { chord in
                         Text(chord.capitalisationMode.tableLabel)
                     }
-                    TableColumn("Usage", value: \.usageCountForSorting) { chord in
-                        Text(chord.usageCount == nil || chord.usageCount == 0 ? "-" : String(chord.usageCount!))
-                    }
+                            TableColumn("Usage", value: \.usageCountForSorting) { chord in
+                                Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
+                            }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onChange(of: sortOrder) { newSortOrder in

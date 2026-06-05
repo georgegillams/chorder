@@ -44,6 +44,7 @@ let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 let maximumOutputChunkLength = 10
 
 class Chord: Identifiable, ObservableObject {
+    let id: String
     @Published var input: String
     var inputSorted: String {
         get {
@@ -52,7 +53,19 @@ class Chord: Identifiable, ObservableObject {
     }
     @Published var output: String
     @Published var capitalisationMode: ChordCapitalisationMode
-    @Published var usageCount: Int?
+    @Published var usageByMachine: [String: Int]
+
+    static let legacyUsageMachineKey = "legacy"
+
+    /// Sum of usage counts across all machines.
+    var totalUsageCount: Int {
+        usageByMachine.values.reduce(0, +)
+    }
+
+    /// Total usage for UI display; nil when zero.
+    var usageCount: Int? {
+        totalUsageCount == 0 ? nil : totalUsageCount
+    }
 
     // These values are calculated when the chord definition changes.
     var deleteCount = 0
@@ -62,19 +75,21 @@ class Chord: Identifiable, ObservableObject {
 
     // Computed property for sorting
     var usageCountForSorting: Int {
-        return usageCount ?? 0
+        totalUsageCount
     }
 
     init(
+        id: String = UUID().uuidString,
         input: String,
         output: String,
-        usageCount: Int? = nil,
+        usageByMachine: [String: Int] = [:],
         capitalisationMode: ChordCapitalisationMode = .default
     ) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
+        self.id = id
         self.input = input
         self.output = output
-        self.usageCount = usageCount
+        self.usageByMachine = usageByMachine
         self.capitalisationMode = capitalisationMode
         rebuildDerivedState()
     }
@@ -165,12 +180,16 @@ class Chord: Identifiable, ObservableObject {
         return "*"
     }
 
-    func incrementUsageCount() {
-        if(usageCount == nil) {
-            usageCount = 0
-        }
+    func incrementUsageCount(for machineId: String) {
+        usageByMachine[machineId, default: 0] += 1
+    }
 
-        usageCount! += 1
+    static func mergedUsage(_ existing: [String: Int], _ incoming: [String: Int]) -> [String: Int] {
+        var merged = existing
+        for (machineId, count) in incoming {
+            merged[machineId] = max(merged[machineId] ?? 0, count)
+        }
+        return merged
     }
 }
 
