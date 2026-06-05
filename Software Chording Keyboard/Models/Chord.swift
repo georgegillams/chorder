@@ -33,6 +33,37 @@ enum ChordCapitalisationMode: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+enum ChordSpaceBeforeOutputMode: String, CaseIterable, Identifiable, Hashable {
+    case `default`
+    case always
+    case never
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .default:
+            return "Default"
+        case .always:
+            return "Always"
+        case .never:
+            return "Never"
+        }
+    }
+
+    /// Label shown in the chords table (`default` is blank).
+    var tableLabel: String {
+        switch self {
+        case .default:
+            return ""
+        case .always:
+            return "Space"
+        case .never:
+            return "No space"
+        }
+    }
+}
+
 extension String {
     func capitalizeFirstLetter() -> String {
         prefix(1).uppercased() + lowercased().dropFirst()
@@ -42,6 +73,19 @@ extension String {
 let SPECIAL_CHARS = "*&^%$£@!#~`()[]{}<>?/;:.,-_=+)1234567890"
 
 let maximumOutputChunkLength = 10
+
+enum SpaceBeforeOutputCorrection {
+    case none
+    case removeAutoInsertedSpace
+    case prependSpaceToOutput
+}
+
+struct ResolvedChordReplacement {
+    let segments: [String]
+    let leftArrowCount: Int
+    /// Extra backspaces before typing output, to remove an auto-inserted leading space.
+    let backspacesBeforeOutput: Int
+}
 
 class Chord: Identifiable, ObservableObject {
     let id: String
@@ -55,6 +99,7 @@ class Chord: Identifiable, ObservableObject {
     }
     @Published var output: String
     @Published var capitalisationMode: ChordCapitalisationMode
+    @Published var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
     @Published var usageByMachine: [String: Int]
 
     static let legacyUsageMachineKey = "legacy"
@@ -85,7 +130,8 @@ class Chord: Identifiable, ObservableObject {
         input: String,
         output: String,
         usageByMachine: [String: Int] = [:],
-        capitalisationMode: ChordCapitalisationMode = .default
+        capitalisationMode: ChordCapitalisationMode = .default,
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default
     ) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.id = id
@@ -93,14 +139,48 @@ class Chord: Identifiable, ObservableObject {
         self.output = output
         self.usageByMachine = usageByMachine
         self.capitalisationMode = capitalisationMode
+        self.spaceBeforeOutputMode = spaceBeforeOutputMode
         rebuildDerivedState()
     }
 
-    func update(input: String, output: String, capitalisationMode: ChordCapitalisationMode) {
+    func update(
+        input: String,
+        output: String,
+        capitalisationMode: ChordCapitalisationMode,
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+    ) {
         self.input = input
         self.output = output
         self.capitalisationMode = capitalisationMode
+        self.spaceBeforeOutputMode = spaceBeforeOutputMode
         rebuildDerivedState()
+    }
+
+    /// Whether this chord wants a leading space when it is the chord being typed.
+    /// For `default`, pass whether global auto-space actually ran before this input.
+    func wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: Bool) -> Bool {
+        switch spaceBeforeOutputMode {
+        case .default:
+            return autoInsertedSpaceBeforeInput && !hasPipe
+        case .always:
+            return true
+        case .never:
+            return false
+        }
+    }
+
+    static func spaceBeforeOutputCorrection(
+        autoInserted: Bool,
+        wantsSpace: Bool
+    ) -> SpaceBeforeOutputCorrection {
+        switch (autoInserted, wantsSpace) {
+        case (true, false):
+            return .removeAutoInsertedSpace
+        case (false, true):
+            return .prependSpaceToOutput
+        default:
+            return .none
+        }
     }
 
     private func rebuildDerivedState() {
@@ -158,6 +238,47 @@ class Chord: Identifiable, ObservableObject {
         let merged = before + after
         let segments = merged.chunked(into: maximumOutputChunkLength)
         return (Self.capitalisedSegments(segments, mode: effectiveCapitalisationMode), after.count)
+    }
+
+    /// Resolves replacement output and any space-before-output correction for the matched chord.
+    func resolveReplacement(
+        referenceDate: Date = Date(),
+        capitalisationMode: CapitalisationMode = .off,
+        autoInsertedSpaceBeforeInput: Bool
+    ) -> ResolvedChordReplacement {
+        let (segments, leftArrowCount) = resolveTypingSegments(
+            referenceDate: referenceDate,
+            capitalisationMode: capitalisationMode
+        )
+        let wantsSpace = wantsSpaceBeforeInputWhenTyped(
+            autoInsertedSpaceBeforeInput: autoInsertedSpaceBeforeInput
+        )
+        let correction = Self.spaceBeforeOutputCorrection(
+            autoInserted: autoInsertedSpaceBeforeInput,
+            wantsSpace: wantsSpace
+        )
+
+        var resolvedSegments = segments
+        var backspacesBeforeOutput = 0
+
+        switch correction {
+        case .none:
+            break
+        case .prependSpaceToOutput:
+            if resolvedSegments.isEmpty {
+                resolvedSegments = [" "]
+            } else {
+                resolvedSegments[0] = " " + resolvedSegments[0]
+            }
+        case .removeAutoInsertedSpace:
+            backspacesBeforeOutput = 1
+        }
+
+        return ResolvedChordReplacement(
+            segments: resolvedSegments,
+            leftArrowCount: leftArrowCount,
+            backspacesBeforeOutput: backspacesBeforeOutput
+        )
     }
 
     private static func capitalisedSegments(_ segments: [String], mode: CapitalisationMode) -> [String] {

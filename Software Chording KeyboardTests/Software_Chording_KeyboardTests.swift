@@ -47,11 +47,95 @@ final class Software_Chording_KeyboardTests: XCTestCase {
             id: "chord-1",
             input: "abc",
             output: "hello",
-            capitalisationMode: "default"
+            capitalisationMode: "default",
+            spaceBeforeOutput: "always"
         )
         let json = String(data: try JSONEncoder().encode(chord), encoding: .utf8)!
         XCTAssertFalse(json.contains("usage"))
         XCTAssertFalse(json.contains("usageCount"))
+        XCTAssertTrue(json.contains("spaceBeforeOutput"))
+        XCTAssertTrue(json.contains("always"))
+    }
+
+    func testSpaceBeforeOutputModeDefaultsWhenMissingFromSettings() throws {
+        let json = """
+        {
+          "millisecondsToHold": "100ms",
+          "chords": [
+            {
+              "id": "chord-1",
+              "input": "abc",
+              "output": "hello"
+            }
+          ]
+        }
+        """
+        let settings = try JSONDecoder().decode(SerialisableAppSettings.self, from: Data(json.utf8))
+        XCTAssertNil(settings.chords.first?.spaceBeforeOutput)
+    }
+
+    func testWantsSpaceBeforeInputWhenTypedRespectsMode() {
+        let defaultChord = Chord(input: "ab", output: "hello")
+        XCTAssertTrue(defaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: true))
+        XCTAssertFalse(defaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: false))
+
+        let pipedDefaultChord = Chord(input: "ab", output: "hel|lo")
+        XCTAssertFalse(pipedDefaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: true))
+        XCTAssertFalse(pipedDefaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: false))
+
+        let alwaysChord = Chord(input: "ab", output: "hel|lo", spaceBeforeOutputMode: .always)
+        XCTAssertTrue(alwaysChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: false))
+
+        let neverChord = Chord(input: "ab", output: "hello", spaceBeforeOutputMode: .never)
+        XCTAssertFalse(neverChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: true))
+    }
+
+    func testSpaceBeforeOutputCorrectionMatrix() {
+        XCTAssertEqual(
+            Chord.spaceBeforeOutputCorrection(autoInserted: true, wantsSpace: false),
+            .removeAutoInsertedSpace
+        )
+        XCTAssertEqual(
+            Chord.spaceBeforeOutputCorrection(autoInserted: false, wantsSpace: true),
+            .prependSpaceToOutput
+        )
+        XCTAssertEqual(
+            Chord.spaceBeforeOutputCorrection(autoInserted: true, wantsSpace: true),
+            .none
+        )
+        XCTAssertEqual(
+            Chord.spaceBeforeOutputCorrection(autoInserted: false, wantsSpace: false),
+            .none
+        )
+    }
+
+    func testResolveReplacementPrependsSpaceWhenNeeded() {
+        let chord = Chord(
+            input: "ab",
+            output: "hello",
+            spaceBeforeOutputMode: .always
+        )
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: false)
+        XCTAssertTrue(resolved.segments.first?.hasPrefix(" ") ?? false)
+        XCTAssertEqual(resolved.backspacesBeforeOutput, 0)
+    }
+
+    func testResolveReplacementDefaultDoesNotPrependWithoutAutoInsertedSpace() {
+        let chord = Chord(input: "ab", output: "hello", spaceBeforeOutputMode: .default)
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: false)
+        XCTAssertEqual(resolved.segments.joined(), "hello")
+        XCTAssertEqual(resolved.backspacesBeforeOutput, 0)
+    }
+
+    func testResolveReplacementBackspacesBeforeOutputWhenNeverAndAutoInserted() {
+        let chord = Chord(
+            input: "ab",
+            output: "hello",
+            spaceBeforeOutputMode: .never
+        )
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: true)
+        XCTAssertEqual(resolved.segments.joined(), "hello")
+        XCTAssertEqual(resolved.backspacesBeforeOutput, 1)
     }
 
     func testChordAssignsIdOnCreation() {

@@ -45,7 +45,6 @@ import SwiftUI
 
  - [ ] Support modifiers - eg press cmd before chord for plural, press option before chord for `ing`
  - [ ] Cloud backup
- - [ ] Chord space setting - default/always-space/never-space
 
  # Lifecycles
 
@@ -55,11 +54,14 @@ import SwiftUI
  - [x] When a key is pressed, we trigger a delay for the chord hold timespan. If after this time, the same combination of keys is pressed, we consider this a chord.
  - [ ] When a chord is detected, it is added to the chord history. At this point, if the chord matches one of our config, the letters typed are removed and the chord output typed.
  - [ ] If the last 2 chords form a chained chord, the previous input and new input are removed and all replaced with the chained chord.
+ - [ ] Share more code between AX and CGEvent paths
+ - [ ] **Full code/system review**
 
  ## Spaces
  - [x] If a chord is entered, we enter space-owed mode.
  - [x] When a key is pressed, if a space is owed, and this is the first key to be pressed, we go back and add the space before the just-typed-character. Space-owed is then off.
  - [x] If the user presses backspace, space, punctuation etc, then space-owed is set off.
+ - [x] Chord space setting - default/always-space/never-space
 
  ## Capitalisation
  - [x] When the shift key is pressed down and then released (without any other key-presses in between), we toggle capitalisation mode.
@@ -91,6 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var ignorekeyPresses = 0
     var inputCharacters = NSMutableArray()
     var owedSpace = false
+    var autoInsertedSpaceBeforeCurrentInput = false
     var shiftPressedDown = false
     var capitalisationMode = CapitalisationMode.off {
         didSet {
@@ -119,6 +122,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             // Remove all characters. There's a strange issue where, sometimes, after shift is released, the characters typed with shift pressed (eg @) remain in the input characters array.
             // This solves it by clearning input letters when shift is released.
             inputCharacters.removeAllObjects()
+            autoInsertedSpaceBeforeCurrentInput = false
 
 
             // If characters were entered while holding shift, then we'll assume the intent of holding shift was to capitalise those letters, and not to turn on capitilisation mode
@@ -173,6 +177,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             capitalisationMode = .off
             inputCharacters.removeAllObjects()
             owedSpace = false
+            autoInsertedSpaceBeforeCurrentInput = false
             return
         }
 
@@ -181,6 +186,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             capitalisationMode = .off
             inputCharacters.removeAllObjects()
             owedSpace = false
+            autoInsertedSpaceBeforeCurrentInput = false
             return
         }
 
@@ -197,6 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         if(owedSpace){
             owedSpace = false
+            autoInsertedSpaceBeforeCurrentInput = true
 
             gDebugPrint("ADDING SPACE")
             self.ignorekeyPresses += 2
@@ -235,7 +242,6 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
                     self.appModel.appSettings.incrementUsage(for: chord!)
                     self.appModel.appSettings.setUsageCountDirty()
                     self.capitalisationMode = .off
-                    self.owedSpace = !chord!.hasPipe
 //                    self.charactersTypedSinceSpaceOwed = 0
                 }
             }
@@ -250,9 +256,22 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     }
 
 
+    private func finalizeChordMatch(chord: Chord) {
+        autoInsertedSpaceBeforeCurrentInput = false
+        owedSpace = !chord.hasPipe
+    }
+
     func replaceCharacters(chord: Chord) {
-        if appModel.appSettings.useAccessibilityAPI && replaceCharactersViaAX(chord: chord) {
+        let resolved = chord.resolveReplacement(
+            capitalisationMode: calculatedCapitalisationMode,
+            autoInsertedSpaceBeforeInput: autoInsertedSpaceBeforeCurrentInput
+        )
+        let outputSegments = resolved.segments
+        let pipeLeftCount = resolved.leftArrowCount
+
+        if appModel.appSettings.useAccessibilityAPI && replaceCharactersViaAX(chord: chord, resolved: resolved) {
             gDebugPrint("replaced via AX")
+            finalizeChordMatch(chord: chord)
             return
         }
 
@@ -261,18 +280,19 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // CGEvent fallback: type a bonus *, backspace over the chord input + bonus char, then type the output.
         // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
         // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
-        let (outputSegments, pipeLeftCount) = chord.resolveTypingSegments(
-            capitalisationMode: calculatedCapitalisationMode
-        )
 
         // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
         // We add 2 extras as we type and remove a bonus * character.
-        ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + 2
+        ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + resolved.backspacesBeforeOutput + 2
 
         typeText(text: "*")
 
         // Clear characters originally typed. +1 so that we include the bonus character above.
         for _ in 0..<chord.deleteCount + 1 {
+            pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
+        }
+
+        for _ in 0..<resolved.backspacesBeforeOutput {
             pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
         }
 
@@ -286,6 +306,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         for _ in 0..<pipeLeftCount {
             pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
+
+        finalizeChordMatch(chord: chord)
     }
 
     // Attempts to replace the chord input with the chord output by directly manipulating the focused
@@ -295,7 +317,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     // This approach avoids posting any synthetic key events, so ignorekeyPresses is not touched.
     // It does not work in Electron apps (Slack, VS Code, Discord) or browser URL bars, where the
     // AX text tree either isn't exposed or doesn't support attribute writes.
-    func replaceCharactersViaAX(chord: Chord) -> Bool {
+    func replaceCharactersViaAX(chord: Chord, resolved: ResolvedChordReplacement) -> Bool {
         // Skip apps whose kAXSelectedTextAttribute write is known to be broken
         if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
            axIncompatibleAppBundleIDs.contains(bundleID) {
@@ -340,12 +362,11 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         // Ensure there are enough characters before the cursor to cover the chord input.
         let inputCount = chord.input.count
-        guard cursorRange.location >= inputCount else {
-            gDebugPrint("AX: cursor location \(cursorRange.location) < inputCount \(inputCount), bailing")
+        let leadingSpaceDeletionCount = resolved.backspacesBeforeOutput
+        guard cursorRange.location >= inputCount + leadingSpaceDeletionCount else {
+            gDebugPrint("AX: cursor location \(cursorRange.location) < inputCount \(inputCount) + leadingSpaceDeletionCount \(leadingSpaceDeletionCount), bailing")
             return false
         }
-        let startIndex = cursorRange.location - inputCount
-        gDebugPrint("AX: inputCount=\(inputCount) startIndex=\(startIndex)")
 
         // Read the full field value and verify the characters immediately before the cursor
         // (sorted, case-insensitive) match the chord input. This guards against edge cases where
@@ -362,7 +383,24 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             gDebugPrint("AX: cursorRange.location \(cursorRange.location) > fieldValue.length \(nsField.length), bailing")
             return false
         }
-        let charsBeforeCursor = nsField.substring(with: NSRange(location: startIndex, length: inputCount)).lowercased()
+
+        var startIndex = cursorRange.location - inputCount
+        if leadingSpaceDeletionCount > 0 {
+            startIndex -= leadingSpaceDeletionCount
+            guard startIndex >= 0 else {
+                gDebugPrint("AX: leading space deletion would underflow field, bailing")
+                return false
+            }
+            let leadingCharacter = nsField.substring(with: NSRange(location: startIndex, length: 1))
+            guard leadingCharacter == " " else {
+                gDebugPrint("AX: expected leading space at \(startIndex), found '\(leadingCharacter)', bailing")
+                return false
+            }
+        }
+        gDebugPrint("AX: inputCount=\(inputCount) startIndex=\(startIndex) leadingSpaceDeletionCount=\(leadingSpaceDeletionCount)")
+
+        let inputStartIndex = startIndex + leadingSpaceDeletionCount
+        let charsBeforeCursor = nsField.substring(with: NSRange(location: inputStartIndex, length: inputCount)).lowercased()
         gDebugPrint("AX: charsBeforeCursor='\(charsBeforeCursor)' chordInput='\(chord.input.lowercased())'")
         guard String(charsBeforeCursor.sorted()) == String(chord.input.lowercased().sorted()) else {
             gDebugPrint("AX: charsBeforeCursor sorted '\(String(charsBeforeCursor.sorted()))' != chord input sorted '\(String(chord.input.lowercased().sorted()))', bailing")
@@ -376,7 +414,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // a timing problem: the first write fires an AX notification that the target app (eg a browser)
         // processes asynchronously. By the time the app acts on it, the second write has already
         // landed, producing garbled results. A single selection + single write avoids that race.
-        var selectRange = CFRange(location: startIndex, length: inputCount + cursorRange.length)
+        var selectRange = CFRange(
+            location: startIndex,
+            length: inputCount + leadingSpaceDeletionCount + cursorRange.length
+        )
         gDebugPrint("AX: setting selectRange location=\(selectRange.location) length=\(selectRange.length)")
         guard let selectAXVal = AXValueCreate(.cfRange, &selectRange) else { return false }
         guard AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, selectAXVal) == .success else {
@@ -400,7 +441,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return false
         }
         gDebugPrint("AX: selectedText after selection='\(selectedText)'")
-        let selectedPrefix = String(selectedText.prefix(inputCount)).lowercased()
+        let selectedPrefix = String(selectedText.dropFirst(leadingSpaceDeletionCount).prefix(inputCount)).lowercased()
         gDebugPrint("AX: selectedPrefix='\(selectedPrefix)' expected sorted='\(String(chord.input.lowercased().sorted()))'")
         guard String(selectedPrefix.sorted()) == String(chord.input.lowercased().sorted()) else {
             gDebugPrint("AX: selection verification failed, restoring cursor and bailing")
@@ -411,9 +452,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             return false
         }
 
-        let (outputSegments, pipeLeftCount) = chord.resolveTypingSegments(
-            capitalisationMode: calculatedCapitalisationMode
-        )
+        let outputSegments = resolved.segments
+        let pipeLeftCount = resolved.leftArrowCount
         let output = outputSegments.joined()
 
         gDebugPrint("AX: writing output='\(output)'")

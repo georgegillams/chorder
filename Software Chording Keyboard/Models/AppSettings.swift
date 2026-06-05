@@ -85,12 +85,18 @@ class AppSettings: ObservableObject {
         id: Chord.ID,
         input: String,
         output: String,
-        capitalisationMode: ChordCapitalisationMode
+        capitalisationMode: ChordCapitalisationMode,
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
     ) {
         guard let index = chords.firstIndex(where: { $0.id == id }) else {
             return
         }
-        chords[index].update(input: input, output: output, capitalisationMode: capitalisationMode)
+        chords[index].update(
+            input: input,
+            output: output,
+            capitalisationMode: capitalisationMode,
+            spaceBeforeOutputMode: spaceBeforeOutputMode
+        )
         recalculateAlphabeticalMapping()
         writeAppSettingsToFile()
     }
@@ -112,11 +118,15 @@ class AppSettings: ObservableObject {
             let capitalisationMode = ChordCapitalisationMode(
                 rawValue: serialisableChord.capitalisationMode ?? ""
             ) ?? .default
+            let spaceBeforeOutputMode = ChordSpaceBeforeOutputMode(
+                rawValue: serialisableChord.spaceBeforeOutput ?? ""
+            ) ?? .default
             return Chord(
                 id: serialisableChord.id,
                 input: serialisableChord.input,
                 output: serialisableChord.output,
-                capitalisationMode: capitalisationMode
+                capitalisationMode: capitalisationMode,
+                spaceBeforeOutputMode: spaceBeforeOutputMode
             )
         }
     }
@@ -140,7 +150,8 @@ class AppSettings: ObservableObject {
                 id: chord.id,
                 input: chord.input,
                 output: chord.output,
-                capitalisationMode: chord.capitalisationMode.rawValue
+                capitalisationMode: chord.capitalisationMode.rawValue,
+                spaceBeforeOutput: chord.spaceBeforeOutputMode.rawValue
             )
         }
     }
@@ -327,12 +338,20 @@ struct SerialisableChord: Codable {
     var input: String
     var output: String
     var capitalisationMode: String?
+    var spaceBeforeOutput: String?
 
-    init(id: String, input: String, output: String, capitalisationMode: String?) {
+    init(
+        id: String,
+        input: String,
+        output: String,
+        capitalisationMode: String?,
+        spaceBeforeOutput: String? = nil
+    ) {
         self.id = id
         self.input = input
         self.output = output
         self.capitalisationMode = capitalisationMode
+        self.spaceBeforeOutput = spaceBeforeOutput
     }
 
     init(from decoder: Decoder) throws {
@@ -341,5 +360,6 @@ struct SerialisableChord: Codable {
         input = try container.decode(String.self, forKey: .input)
         output = try container.decode(String.self, forKey: .output)
         capitalisationMode = try container.decodeIfPresent(String.self, forKey: .capitalisationMode)
+        spaceBeforeOutput = try container.decodeIfPresent(String.self, forKey: .spaceBeforeOutput)
     }
 }

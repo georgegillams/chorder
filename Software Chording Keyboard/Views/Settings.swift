@@ -67,6 +67,7 @@ private struct ChordEditorSheet: View {
     @Binding var input: String
     @Binding var output: String
     @Binding var capitalisationMode: ChordCapitalisationMode
+    @Binding var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
     @Binding var showInputConflictConfirmation: Bool
     let inputConflictTitle: String
     let inputConflictMessage: String
@@ -131,6 +132,11 @@ private struct ChordEditorSheet: View {
                         Text(mode.displayName).tag(mode)
                     }
                 }
+                Picker("Space before output", selection: $spaceBeforeOutputMode) {
+                    ForEach(ChordSpaceBeforeOutputMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal, -20)
@@ -173,6 +179,7 @@ struct SettingsView: View {
     @State private var chordFormInput = ""
     @State private var chordFormOutput = ""
     @State private var chordFormCapitalisationMode: ChordCapitalisationMode = .default
+    @State private var chordFormSpaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
@@ -224,6 +231,7 @@ struct SettingsView: View {
         chordFormInput = ""
         chordFormOutput = ""
         chordFormCapitalisationMode = .default
+        chordFormSpaceBeforeOutputMode = .default
         chordEditorContext = .create
     }
 
@@ -235,6 +243,7 @@ struct SettingsView: View {
         chordFormInput = chord.input
         chordFormOutput = chord.output
         chordFormCapitalisationMode = chord.capitalisationMode
+        chordFormSpaceBeforeOutputMode = chord.spaceBeforeOutputMode
         chordEditorContext = .edit(id)
     }
 
@@ -270,6 +279,7 @@ struct SettingsView: View {
         chordFormInput = ""
         chordFormOutput = ""
         chordFormCapitalisationMode = .default
+        chordFormSpaceBeforeOutputMode = .default
         conflictingChordForSave = nil
         showChordInputConflictConfirmation = false
     }
@@ -361,13 +371,15 @@ struct SettingsView: View {
                     id: existingId,
                     input: chordFormInput,
                     output: chordFormOutput,
-                    capitalisationMode: chordFormCapitalisationMode
+                    capitalisationMode: chordFormCapitalisationMode,
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
                 )
             } else {
                 appModel.appSettings.addChord(chord: Chord(
                     input: chordFormInput,
                     output: chordFormOutput,
-                    capitalisationMode: chordFormCapitalisationMode
+                    capitalisationMode: chordFormCapitalisationMode,
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
                 ))
             }
         case .edit(let editingId):
@@ -376,7 +388,8 @@ struct SettingsView: View {
                 id: targetId,
                 input: chordFormInput,
                 output: chordFormOutput,
-                capitalisationMode: chordFormCapitalisationMode
+                capitalisationMode: chordFormCapitalisationMode,
+                spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
             )
         case nil:
             return
@@ -444,6 +457,7 @@ struct SettingsView: View {
                 input: $chordFormInput,
                 output: $chordFormOutput,
                 capitalisationMode: $chordFormCapitalisationMode,
+                spaceBeforeOutputMode: $chordFormSpaceBeforeOutputMode,
                 showInputConflictConfirmation: $showChordInputConflictConfirmation,
                 inputConflictTitle: chordInputConflictTitle,
                 inputConflictMessage: chordInputConflictMessage,
@@ -492,6 +506,9 @@ struct SettingsView: View {
                     }
                     TableColumn("Capitalisation") { chord in
                         Text(chord.capitalisationMode.tableLabel)
+                    }
+                    TableColumn("Space") { chord in
+                        Text(chord.spaceBeforeOutputMode.tableLabel)
                     }
                     TableColumn("Usage", value: \.usageCountForSorting) { chord in
                         Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
