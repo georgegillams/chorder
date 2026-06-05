@@ -171,6 +171,28 @@ private struct ChordEditorSheet: View {
     }
 }
 
+private struct ChordOptionsCell: View {
+    @ObservedObject var chord: Chord
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let symbol = chord.capitalisationMode.optionsSymbolName,
+               let tooltip = chord.capitalisationMode.optionsTooltip {
+                Image(systemName: symbol)
+                    .help(tooltip)
+                    .accessibilityLabel(tooltip)
+            }
+            if let symbol = chord.spaceBeforeOutputMode.optionsSymbolName,
+               let tooltip = chord.spaceBeforeOutputMode.optionsTooltip {
+                Image(systemName: symbol)
+                    .help(tooltip)
+                    .accessibilityLabel(tooltip)
+            }
+        }
+        .font(.caption)
+    }
+}
+
 struct SettingsView: View {
     var delegate: AppDelegate = NSApp.delegate as! AppDelegate
     @ObservedObject var appModel: AppModel
@@ -504,12 +526,10 @@ struct SettingsView: View {
                     TableColumn("Output", value: \.output) { chord in
                         Text(chord.output)
                     }
-                    TableColumn("Capitalisation") { chord in
-                        Text(chord.capitalisationMode.tableLabel)
+                    TableColumn("Settings") { chord in
+                        ChordOptionsCell(chord: chord)
                     }
-                    TableColumn("Space") { chord in
-                        Text(chord.spaceBeforeOutputMode.tableLabel)
-                    }
+                    .width(min: 48, ideal: 64)
                     TableColumn("Usage", value: \.usageCountForSorting) { chord in
                         Text(chord.totalUsageCount == 0 ? "-" : String(chord.totalUsageCount))
                     }
