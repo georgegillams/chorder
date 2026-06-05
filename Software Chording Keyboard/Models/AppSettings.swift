@@ -98,6 +98,7 @@ class AppSettings: ObservableObject {
             spaceBeforeOutputMode: spaceBeforeOutputMode
         )
         recalculateAlphabeticalMapping()
+        objectWillChange.send()
         writeAppSettingsToFile()
     }
 

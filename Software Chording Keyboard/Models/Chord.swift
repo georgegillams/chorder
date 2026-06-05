@@ -22,13 +22,23 @@ enum ChordCapitalisationMode: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Label shown in the chords table (`default` is blank).
-    var tableLabel: String {
+    /// SF Symbol for the chords table Options column; nil when default.
+    var optionsSymbolName: String? {
         switch self {
         case .default:
-            return ""
+            return nil
         case .alwaysOriginalCase:
-            return "Fixed"
+            return "textformat.abc"
+        }
+    }
+
+    /// Tooltip for the chords table Options column; nil when default.
+    var optionsTooltip: String? {
+        switch self {
+        case .default:
+            return nil
+        case .alwaysOriginalCase:
+            return "Capitalisation: Always original case"
         }
     }
 }
@@ -51,15 +61,27 @@ enum ChordSpaceBeforeOutputMode: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Label shown in the chords table (`default` is blank).
-    var tableLabel: String {
+    /// SF Symbol for the chords table Options column; nil when default.
+    var optionsSymbolName: String? {
         switch self {
         case .default:
-            return ""
+            return nil
         case .always:
-            return "Space"
+            return "space"
         case .never:
-            return "No space"
+            return "arrow.left.to.line.compact"
+        }
+    }
+
+    /// Tooltip for the chords table Options column; nil when default.
+    var optionsTooltip: String? {
+        switch self {
+        case .default:
+            return nil
+        case .always:
+            return "Space before output: Always"
+        case .never:
+            return "Space before output: Never"
         }
     }
 }
