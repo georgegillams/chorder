@@ -238,6 +238,19 @@ class AppSettings: ObservableObject {
         clearDirty()
     }
 
+    /// Reloads settings and usage from disk, for example after iCloud sync from another machine.
+    func reloadFromSyncedStorage() {
+        guard initialisationComplete else {
+            return
+        }
+        if isDirty {
+            writeLocalMachineStatsFile()
+            clearDirty()
+        }
+        gDebugPrint("Reloading settings and usage from synced storage")
+        readAppSettingsFromFile()
+    }
+
     func chooseBackupSettingsFileLocation() {
         let dialog = NSOpenPanel();
         dialog.title                   = "Choose settings location";

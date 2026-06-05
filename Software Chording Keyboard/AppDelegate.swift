@@ -29,9 +29,9 @@ import SwiftUI
  ## Statistics
  - [x] The app records statistics about chords used and missed, and persists these to file periodically.
  - [x] The app can show a user their statistics.
- - [ ] The app periodically reloads usage data, in case it has changed on another machine
+ - [x] The app periodically reloads settings and usage data, in case they have changed on another machine
        - On wake
-       - On interval
+       - Every 30 minutes
  - [x] Debounce usage writes to file to prevent excessive cloud storage usage
 
  ## UI
@@ -80,6 +80,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     var statusBarItem: NSStatusItem!
     var settingsWindow: NSWindow? = nil
     var settingsUI: SettingsView? = nil
+
+    private let syncedStorageReloadInterval: TimeInterval = 30 * 60
+    private var syncedStorageReloadTimer: Timer?
+    private var workspaceWakeObserver: NSObjectProtocol?
 
     /* Typing */
 
@@ -554,6 +558,38 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         if ProcessInfo.processInfo.arguments.contains("G_DEBUG") {
             showSettingsWindow()
         }
+
+        startSyncedStorageReloadSchedule()
+    }
+
+    private func startSyncedStorageReloadSchedule() {
+        syncedStorageReloadTimer = Timer.scheduledTimer(
+            withTimeInterval: syncedStorageReloadInterval,
+            repeats: true
+        ) { [weak self] _ in
+            self?.reloadSyncedSettingsAndUsage()
+        }
+
+        workspaceWakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.reloadSyncedSettingsAndUsage()
+        }
+    }
+
+    private func stopSyncedStorageReloadSchedule() {
+        syncedStorageReloadTimer?.invalidate()
+        syncedStorageReloadTimer = nil
+        if let workspaceWakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceWakeObserver)
+            self.workspaceWakeObserver = nil
+        }
+    }
+
+    private func reloadSyncedSettingsAndUsage() {
+        appModel.appSettings.reloadFromSyncedStorage()
     }
 
     func createStatusBarButton () {
@@ -677,7 +713,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
-        // Insert code here to tear down your application
+        stopSyncedStorageReloadSchedule()
         appModel.appSettings.closeSettingsFileAccess()
     }
 
