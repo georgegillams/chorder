@@ -10,6 +10,12 @@ import XCTest
 
 final class Software_Chording_KeyboardTests: XCTestCase {
 
+    func testNormalisedInputKeyTreatsPermutationsAndCaseAsEqual() {
+        XCTAssertEqual(Chord.normalisedInputKey(for: "Ab"), Chord.normalisedInputKey(for: "ab"))
+        XCTAssertEqual(Chord.normalisedInputKey(for: "Ab"), Chord.normalisedInputKey(for: "ba"))
+        XCTAssertEqual(Chord.normalisedInputKey(for: "Ab"), Chord.normalisedInputKey(for: "BA"))
+    }
+
     func testMergedUsageKeepsHighestCountPerMachine() {
         let existing = ["machine-a": 5, "machine-b": 3]
         let incoming = ["machine-a": 7, "machine-c": 1]

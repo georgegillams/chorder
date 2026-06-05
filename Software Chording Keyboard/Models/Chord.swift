@@ -46,10 +46,12 @@ let maximumOutputChunkLength = 10
 class Chord: Identifiable, ObservableObject {
     let id: String
     @Published var input: String
+    static func normalisedInputKey(for input: String) -> String {
+        String(input.lowercased().sorted())
+    }
+
     var inputSorted: String {
-        get {
-            return String(input.sorted())
-        }
+        Self.normalisedInputKey(for: input)
     }
     @Published var output: String
     @Published var capitalisationMode: ChordCapitalisationMode

@@ -67,7 +67,11 @@ private struct ChordEditorSheet: View {
     @Binding var input: String
     @Binding var output: String
     @Binding var capitalisationMode: ChordCapitalisationMode
+    @Binding var showInputConflictConfirmation: Bool
+    let inputConflictTitle: String
+    let inputConflictMessage: String
     let onSave: () -> Void
+    let onReplaceConflict: () -> Void
     let onCancel: () -> Void
 
     @FocusState private var focusedField: Field?
@@ -138,6 +142,15 @@ private struct ChordEditorSheet: View {
                 Button("Save", action: onSave)
                     .keyboardShortcut(.defaultAction)
                     .keyboardShortcut("s", modifiers: .command)
+                    .confirmationDialog(
+                        inputConflictTitle,
+                        isPresented: $showInputConflictConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Replace", action: onReplaceConflict)
+                    } message: {
+                        Text(inputConflictMessage)
+                    }
             }
         }
         .padding(24)
@@ -167,6 +180,8 @@ struct SettingsView: View {
     @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
     @State private var selectedSidebarItem: SettingsSidebarItem? = .chords
     @State private var showDeleteChordsConfirmation = false
+    @State private var showChordInputConflictConfirmation = false
+    @State private var conflictingChordForSave: Chord?
 
     init(appModel: AppModel) {
         self.appModel = appModel
@@ -188,8 +203,8 @@ struct SettingsView: View {
                 let outputMatches = chord.output.lowercased().contains(filterText)
 
                 // Check if input (sorted alphabetically) matches the filter (sorted alphabetically)
-                let sortedInput = String(chord.input.lowercased().sorted())
-                let sortedFilter = String(filterText.sorted())
+                let sortedInput = Chord.normalisedInputKey(for: chord.input)
+                let sortedFilter = Chord.normalisedInputKey(for: filterText)
                 let inputMatches = sortedInput.contains(sortedFilter)
 
                 return outputMatches || inputMatches
@@ -254,6 +269,8 @@ struct SettingsView: View {
         chordFormInput = ""
         chordFormOutput = ""
         chordFormCapitalisationMode = .default
+        conflictingChordForSave = nil
+        showChordInputConflictConfirmation = false
     }
 
     private func revealSettingsFileInFinder() {
@@ -304,17 +321,58 @@ struct SettingsView: View {
         }
     }
 
-    private func saveChordEditor() {
+    private var chordEditorExcludingID: Chord.ID? {
+        if case .edit(let id) = chordEditorContext {
+            return id
+        }
+        return nil
+    }
+
+    private var chordInputConflictTitle: String {
+        "Replace existing chord?"
+    }
+
+    private var chordInputConflictMessage: String {
+        guard let conflict = conflictingChordForSave else {
+            return ""
+        }
+        return "Another chord already uses this input combination (\(conflict.input) → \(conflict.output)). Replace it with what you entered, or cancel to keep editing."
+    }
+
+    private func conflictingChord(for input: String, excludingId: Chord.ID?) -> Chord? {
+        let key = Chord.normalisedInputKey(for: input)
+        guard !key.isEmpty else {
+            return nil
+        }
+        return appModel.appSettings.chords.first { chord in
+            if chord.id == excludingId {
+                return false
+            }
+            return Chord.normalisedInputKey(for: chord.input) == key
+        }
+    }
+
+    private func commitChordEditor(replacingExistingId existingId: Chord.ID?) {
         switch chordEditorContext {
         case .create:
-            appModel.appSettings.addChord(chord: Chord(
-                input: chordFormInput,
-                output: chordFormOutput,
-                capitalisationMode: chordFormCapitalisationMode
-            ))
-        case .edit(let id):
+            if let existingId {
+                appModel.appSettings.updateChord(
+                    id: existingId,
+                    input: chordFormInput,
+                    output: chordFormOutput,
+                    capitalisationMode: chordFormCapitalisationMode
+                )
+            } else {
+                appModel.appSettings.addChord(chord: Chord(
+                    input: chordFormInput,
+                    output: chordFormOutput,
+                    capitalisationMode: chordFormCapitalisationMode
+                ))
+            }
+        case .edit(let editingId):
+            let targetId = existingId ?? editingId
             appModel.appSettings.updateChord(
-                id: id,
+                id: targetId,
                 input: chordFormInput,
                 output: chordFormOutput,
                 capitalisationMode: chordFormCapitalisationMode
@@ -322,7 +380,24 @@ struct SettingsView: View {
         case nil:
             return
         }
+        conflictingChordForSave = nil
         dismissChordEditor()
+    }
+
+    private func saveChordEditor() {
+        if let conflict = conflictingChord(for: chordFormInput, excludingId: chordEditorExcludingID) {
+            conflictingChordForSave = conflict
+            showChordInputConflictConfirmation = true
+            return
+        }
+        commitChordEditor(replacingExistingId: nil)
+    }
+
+    private func replaceConflictingChord() {
+        guard let conflict = conflictingChordForSave else {
+            return
+        }
+        commitChordEditor(replacingExistingId: conflict.id)
     }
 
     var body: some View {
@@ -368,7 +443,11 @@ struct SettingsView: View {
                 input: $chordFormInput,
                 output: $chordFormOutput,
                 capitalisationMode: $chordFormCapitalisationMode,
+                showInputConflictConfirmation: $showChordInputConflictConfirmation,
+                inputConflictTitle: chordInputConflictTitle,
+                inputConflictMessage: chordInputConflictMessage,
                 onSave: saveChordEditor,
+                onReplaceConflict: replaceConflictingChord,
                 onCancel: dismissChordEditor
             )
         }

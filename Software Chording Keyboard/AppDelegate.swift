@@ -17,7 +17,7 @@ import SwiftUI
  ## Persistence
  - [x] When the app is first started, if a config file is set, it loads settings from this file.
  - [x] When the app is first started, if not, the default config is used.
- - [ ] When the user selects a config file location that already has config, they are asked if they want to read it or overwrite it.
+ - [?] When the user selects a config file location that already has config, they are asked if they want to read it or overwrite it.
 
  ## Customisation
  - [x] A user can add and remove chords from the UI.
@@ -38,14 +38,14 @@ import SwiftUI
  - [x] The current capitalisation mode is reflected in the menu-bar icon.
  - [x] Permissions issues are reflected in the menu.
  - [ ] The UI represents both single and chained chords.
- - [ ] The UI prevents adding conflicting chords.
+ - [x] The UI prevents adding conflicting chords.
  - [ ] Onboarding flow for permissions + tutorial
 
  ## Features
 
  - [ ] Support modifiers - eg press cmd before chord for plural, press option before chord for `ing`
-
-
+ - [ ] Cloud backup
+ - [ ] Chord space setting - default/always-space/never-space
 
  # Lifecycles
 
