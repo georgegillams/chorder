@@ -776,6 +776,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {
         stopSyncedStorageReloadSchedule()
+        appModel.appSettings.flushPendingStatsIfNeeded()
         appModel.appSettings.closeSettingsFileAccess()
     }
 

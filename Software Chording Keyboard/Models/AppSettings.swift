@@ -321,6 +321,15 @@ class AppSettings: ObservableObject {
         isDirty = false
     }
 
+    /// Writes pending usage stats immediately. Call on app termination before releasing file access.
+    public func flushPendingStatsIfNeeded() {
+        guard isDirty, initialisationComplete, !suppressWritingToFile else {
+            return
+        }
+        writeLocalMachineStatsFile()
+        clearDirty()
+    }
+
     public func closeSettingsFileAccess() {
         if let directoryUrl = settingsFileDirectory {
             directoryUrl.stopAccessingSecurityScopedResource()
