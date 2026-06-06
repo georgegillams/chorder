@@ -861,7 +861,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
 
     func testChordPracticeSelectionDisplayOutputExpandsPlaceholdersAndRemovesPipe() {
         let chord = Chord(input: "dt", output: "on {{yyyy}}|day")
-        let display = ChordPracticeSelection.displayOutput(for: chord, referenceDate: Date(timeIntervalSince1970: 0))
+        let display = chord.displayOutput(referenceDate: Date(timeIntervalSince1970: 0))
         XCTAssertEqual(display, "on 1970day")
     }
 

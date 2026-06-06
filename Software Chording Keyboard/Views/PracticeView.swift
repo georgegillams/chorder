@@ -17,7 +17,7 @@ private struct PracticeInputHint: View {
 
             if isHovered {
                 Text(chordInput)
-                    .font(.system(.callout, design: .monospaced))
+                    .font(.system(.subheadline, design: .monospaced))
                     .foregroundColor(.secondary)
             }
         }
@@ -44,7 +44,7 @@ struct PracticeView: View {
 
     private var targetOutput: String {
         guard let currentChord else { return "" }
-        return ChordPracticeSelection.displayOutput(for: currentChord)
+        return currentChord.displayOutput
     }
 
     var body: some View {
@@ -97,7 +97,7 @@ struct PracticeView: View {
             Text("No chords to practise")
                 .font(.headline)
             Text("Add some chords first, then come back to practise the ones you use least.")
-                .font(.settingsSecondary)
+                .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
@@ -111,7 +111,7 @@ struct PracticeView: View {
 
             VStack(spacing: 8) {
                 Text(isShowingSuccess ? "You produced" : "Chord this output")
-                    .font(.settingsSecondary)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
 
                 Text(isShowingSuccess ? lastChordedOutput : targetOutput)
@@ -126,7 +126,7 @@ struct PracticeView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Text("Practise here")
-                        .font(.settingsSecondary)
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
 
                     PracticeInputHint(chordInput: chord.input)
@@ -138,11 +138,11 @@ struct PracticeView: View {
 
             if chord.totalUsageCount == 0 {
                 Text("Never used — good candidate to learn")
-                    .font(.settingsSecondary)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
             } else {
                 Text("Used \(chord.totalUsageCount) time\(chord.totalUsageCount == 1 ? "" : "s")")
-                    .font(.settingsSecondary)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
             }
 
@@ -180,7 +180,7 @@ struct PracticeView: View {
         VStack(alignment: .leading, spacing: 10) {
             if isShowingSuccess {
                 Label("Chord matched", systemImage: "checkmark.circle.fill")
-                    .font(.settingsSecondary)
+                    .font(.subheadline)
                     .foregroundColor(.green)
             } else if monitor.heldCharacters.isEmpty {
                 Text("Hold the chord keys together…")
@@ -231,7 +231,7 @@ struct PracticeView: View {
         guard let currentChord else { return }
 
         monitor.stop()
-        lastChordedOutput = ChordPracticeSelection.displayOutput(for: currentChord)
+        lastChordedOutput = currentChord.displayOutput
         PracticeFeedbackSound.playSuccess()
 
         let previousId = currentChord.id

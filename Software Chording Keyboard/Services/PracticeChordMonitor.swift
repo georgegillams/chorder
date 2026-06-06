@@ -69,18 +69,6 @@ final class PracticeChordMonitor: ObservableObject {
     private func handleKeyDown(_ event: NSEvent) {
         let eventKey = event.keyCode
 
-        if eventKey == KeyboardConstants.spaceEventKey
-            || eventKey == KeyboardConstants.tabEventKey
-            || eventKey == KeyboardConstants.backspaceEventKey
-            || eventKey == KeyboardConstants.returnEventKey
-            || eventKey == KeyboardConstants.escapeEventKey
-            || eventKey == KeyboardConstants.leftEventKey
-            || eventKey == KeyboardConstants.rightEventKey {
-            chordDetection.reset()
-            updateHeldCharacters()
-            return
-        }
-
         chordDetection.keyDown(
             keyCode: eventKey,
             character: event.characters,

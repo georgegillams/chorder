@@ -121,7 +121,7 @@ enum ChordUsageSummary {
     }
 
     static func charactersSavedPerUse(for chord: Chord, referenceDate: Date = Date()) -> Int {
-        let outputLength = ChordPracticeSelection.displayOutput(for: chord, referenceDate: referenceDate).count
+        let outputLength = chord.displayOutput(referenceDate: referenceDate).count
         return outputLength - chord.input.count
     }
 

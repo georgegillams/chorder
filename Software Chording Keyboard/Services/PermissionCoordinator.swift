@@ -47,6 +47,7 @@ final class PermissionCoordinator {
         checkNextPermission()
     }
 
+    // Recursively requests each permission, until all required permissions are available
     private func checkNextPermission() {
         let hasInputMonitoringPermission = hasInputMonitoringPermission()
         gDebugPrint("Input monitoring access: \(hasInputMonitoringPermission)")

@@ -12,12 +12,15 @@ enum ChordPracticeSelection {
         let pool = chords.filter { $0.id != excludingId }
         guard !pool.isEmpty else { return nil }
 
+        // Less-used chords get higher weight (e.g. usage 0 → 1.0, usage 9 → 0.1).
         let weights = pool.map { chord in
             1.0 / Double(chord.totalUsageCount + 1)
         }
+        // reduce(0, +) sums the array: starts at 0, then adds each weight.
         let totalWeight = weights.reduce(0, +)
         var roll = Double.random(in: 0..<totalWeight)
 
+        // zip pairs pool[i] with weights[i] so we can walk chords alongside their weights.
         for (chord, weight) in zip(pool, weights) {
             roll -= weight
             if roll <= 0 {
@@ -26,12 +29,6 @@ enum ChordPracticeSelection {
         }
 
         return pool.last
-    }
-
-    /// Resolved output text shown in practice (placeholders expanded, pipe removed).
-    static func displayOutput(for chord: Chord, referenceDate: Date = Date()) -> String {
-        let (segments, _) = chord.resolveTypingSegments(referenceDate: referenceDate)
-        return segments.joined()
     }
 
 }
