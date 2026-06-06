@@ -588,12 +588,16 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         updateActivationPolicy()
 
-        checkInputAccess()
-        createStatusBarButton()
-
         chordDetection.onChordMatched = { [weak self] normalisedInputKey in
             self?.handleChordMatch(normalisedInputKey: normalisedInputKey)
         }
+        chordDetection.isRegisteredChord = { [weak self] normalisedKey in
+            guard let self else { return false }
+            return self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[normalisedKey] != nil
+        }
+
+        checkInputAccess()
+        createStatusBarButton()
 
         NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)

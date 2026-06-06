@@ -226,6 +226,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         let holdDuration: TimeInterval = 0.05
         let expectation = expectation(description: "chord matched")
 
+        detection.isRegisteredChord = { $0 == "ht" }
         detection.onChordMatched = { normalisedKey in
             XCTAssertEqual(normalisedKey, "ht")
             expectation.fulfill()
@@ -237,11 +238,12 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         waitForExpectations(timeout: 1)
     }
 
-    func testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes() {
+    func testChordDetectionFiresShorterChordImmediatelyWhenLongerAlsoConfigured() {
         let detection = ChordDetectionState()
-        let holdDuration: TimeInterval = 0.1
+        let holdDuration: TimeInterval = 0.05
         var matchedKeys: [String] = []
 
+        detection.isRegisteredChord = { ["ht", "hit"].contains($0) }
         detection.onChordMatched = { normalisedKey in
             matchedKeys.append(normalisedKey)
         }
@@ -249,17 +251,32 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         detection.keyDown(keyCode: 17, character: "t", holdDuration: holdDuration)
         detection.keyDown(keyCode: 4, character: "h", holdDuration: holdDuration)
 
-        let earlyExpectation = expectation(description: "original hold window elapses")
+        let holdExpectation = expectation(description: "hold completes")
         DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration + 0.02) {
-            earlyExpectation.fulfill()
+            holdExpectation.fulfill()
         }
         waitForExpectations(timeout: 1)
 
+        XCTAssertEqual(matchedKeys, ["ht"])
+    }
+
+    func testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes() {
+        let detection = ChordDetectionState()
+        let holdDuration: TimeInterval = 0.1
+        var matchedKeys: [String] = []
+
+        detection.isRegisteredChord = { ["ht", "hit"].contains($0) }
+        detection.onChordMatched = { normalisedKey in
+            matchedKeys.append(normalisedKey)
+        }
+
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: holdDuration)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: holdDuration)
         detection.keyDown(keyCode: 34, character: "i", holdDuration: holdDuration)
 
-        let lateExpectation = expectation(description: "updated hold window elapses")
+        let holdExpectation = expectation(description: "thi hold window elapses")
         DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration + 0.02) {
-            lateExpectation.fulfill()
+            holdExpectation.fulfill()
         }
         waitForExpectations(timeout: 1)
 
