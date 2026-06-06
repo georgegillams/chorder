@@ -119,7 +119,7 @@ struct StatsView: View {
             Text("Your chording wins")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
 
-            Text("Every chord is keystrokes you never had to type.")
+            Text("Every chord represents keystrokes you never had to type.")
                 .font(.settingsSecondary)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
