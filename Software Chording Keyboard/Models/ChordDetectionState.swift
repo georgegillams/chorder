@@ -24,24 +24,35 @@ final class ChordDetectionState {
     private var holdWorkItem: DispatchWorkItem?
 
     var onChordMatched: ((String) -> Void)?
+    /// Check against configured chords (sorted input key). Wired once at launch; registry
+    /// is rebuilt in AppSettings when chords load or change.
+    var isRegisteredChord: ((String) -> Bool)?
 
     func reset() {
         cancelHoldTimer()
         heldKeys.removeAll()
         phase = .idle
+        gDebugPrint("ChordDetectionState: reset")
     }
 
     func keyDown(keyCode: UInt16, character: String?, holdDuration: TimeInterval) {
-        guard phase != .replacing else { return }
-        guard let character, !character.isEmpty else { return }
+        guard phase != .replacing else {
+            gDebugPrint("ChordDetectionState: keyDown ignored while replacing keyCode=\(keyCode)")
+            return
+        }
+        guard let character, !character.isEmpty else {
+            gDebugPrint("ChordDetectionState: keyDown ignored empty character keyCode=\(keyCode)")
+            return
+        }
 
-        // Ignore key repeat while a key stays held.
         if heldKeys.contains(where: { $0.keyCode == keyCode }) {
+            gDebugPrint("ChordDetectionState: keyDown ignored repeat keyCode=\(keyCode)")
             return
         }
 
         heldKeys.append(HeldKey(keyCode: keyCode, character: character))
         updatePhaseAfterHeldKeysChanged()
+        gDebugPrint("ChordDetectionState: keyDown keyCode=\(keyCode) char=\(character) held=\(joinedCharactersLowercased()) phase=\(phase)")
 
         if heldKeys.count >= 2 {
             scheduleHoldTimer(holdDuration: holdDuration)
@@ -51,23 +62,25 @@ final class ChordDetectionState {
     }
 
     func keyUp(keyCode: UInt16, holdDuration: TimeInterval) {
-        guard phase != .replacing else { return }
+        guard phase != .replacing else {
+            gDebugPrint("ChordDetectionState: keyUp ignored while replacing keyCode=\(keyCode)")
+            return
+        }
 
         heldKeys.removeAll { $0.keyCode == keyCode }
         cancelHoldTimer()
         updatePhaseAfterHeldKeysChanged()
+        gDebugPrint("ChordDetectionState: keyUp keyCode=\(keyCode) held=\(joinedCharactersLowercased()) phase=\(phase)")
 
         if heldKeys.count >= 2 {
             scheduleHoldTimer(holdDuration: holdDuration)
         }
     }
 
-    /// Characters joined in key-down order (lowercased), used for hold stability checks.
     func joinedCharactersLowercased() -> String {
         heldKeys.map(\.character).joined().lowercased()
     }
 
-    /// Sorted character key for chord dictionary lookup.
     func normalisedInputKey() -> String {
         Chord.normalisedInputKey(for: joinedCharactersLowercased())
     }
@@ -76,16 +89,17 @@ final class ChordDetectionState {
         cancelHoldTimer()
         heldKeys.removeAll()
         phase = .replacing
+        gDebugPrint("ChordDetectionState: beginReplacement")
     }
 
     func finishReplacement() {
         reset()
     }
 
-    /// Called when a hold completed but no configured chord matched.
     func resumeAccumulating() {
         cancelHoldTimer()
         phase = heldKeys.isEmpty ? .idle : .accumulating
+        gDebugPrint("ChordDetectionState: resumeAccumulating phase=\(phase)")
     }
 
     private func updatePhaseAfterHeldKeysChanged() {
@@ -103,6 +117,7 @@ final class ChordDetectionState {
 
         let snapshot = joinedCharactersLowercased()
         phase = .holdPending(joinedSnapshot: snapshot)
+        gDebugPrint("ChordDetectionState: scheduling hold snapshot=\(snapshot) duration=\(holdDuration)s")
 
         let work = DispatchWorkItem { [weak self] in
             self?.evaluateHold(snapshot: snapshot)
@@ -117,16 +132,29 @@ final class ChordDetectionState {
     }
 
     private func evaluateHold(snapshot: String) {
-        guard case .holdPending = phase else { return }
+        guard case .holdPending = phase else {
+            gDebugPrint("ChordDetectionState: evaluateHold skipped phase=\(phase)")
+            return
+        }
 
-        // Suppose we have 2 chords that use the same input prefix. eg hi->hi and hid->hid
-        // If a user pressed hid together, we shouldn't print "hi" as, even if the snapshot was "hi",
-        // by the time the hold duration has passed, the held keys will have changed.
-        guard joinedCharactersLowercased() == snapshot else {
+        let current = joinedCharactersLowercased()
+        guard current == snapshot else {
+            gDebugPrint("ChordDetectionState: evaluateHold snapshot mismatch snapshot=\(snapshot) current=\(current)")
             updatePhaseAfterHeldKeysChanged()
             return
         }
 
-        onChordMatched?(normalisedInputKey())
+        let normalisedKey = normalisedInputKey()
+        let registered = isRegisteredChord?(normalisedKey) ?? false
+        gDebugPrint("ChordDetectionState: evaluateHold normalisedKey=\(normalisedKey) registered=\(registered)")
+
+        guard registered else {
+            gDebugPrint("ChordDetectionState: evaluateHold no registered chord for \(normalisedKey)")
+            updatePhaseAfterHeldKeysChanged()
+            return
+        }
+
+        gDebugPrint("ChordDetectionState: evaluateHold matched \(normalisedKey)")
+        onChordMatched?(normalisedKey)
     }
 }
