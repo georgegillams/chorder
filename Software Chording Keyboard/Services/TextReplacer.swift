@@ -41,11 +41,7 @@ struct TextReplacer {
     func replaceViaSyntheticKeys(chord: Chord, resolved: ResolvedChordReplacement) -> Int {
         let outputSegments = resolved.segments
         let pipeLeftCount = resolved.leftArrowCount
-
-        // pressKey posts keyDown + keyUp; typeText posts keyDown + keyUp per chunk.
-        // We add 2 extras for the bonus * typeText (down + up).
-        let syntheticKeyPressCount = chord.deleteCount + 1 + resolved.backspacesBeforeOutput + pipeLeftCount
-        let ignoreCount = (2 * syntheticKeyPressCount) + (2 * outputSegments.count) + 2
+        let ignoreCount = resolved.syntheticKeyEchoCount(inputDeleteCount: chord.deleteCount)
 
         typeText("*")
 
@@ -72,119 +68,97 @@ struct TextReplacer {
     /// Attempts to replace the chord input with the chord output via the Accessibility API.
     /// Returns true on success, false if any AX call fails (caller should fall back to synthetic keys).
     func replaceViaAccessibility(chord: Chord, resolved: ResolvedChordReplacement) -> Bool {
+        gDebugPrint("AX: attempting replacement for chord '\(chord.input)' → '\(resolved.outputText)'")
+
         if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
            axIncompatibleAppBundleIDs.contains(bundleID) {
-            gDebugPrint("AX: skipping for AX-incompatible app \(bundleID)")
-            return false
+            return axFail("app '\(bundleID)' is on the AX-incompatible list (known broken kAXSelectedTextAttribute writes)")
         }
 
         let axUiElement = AXUIElementCreateSystemWide()
         var focusedRef: AnyObject?
         guard AXUIElementCopyAttributeValue(axUiElement, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success else {
-            gDebugPrint("AX: failed to get focused element")
-            return false
+            return axFail("could not read kAXFocusedUIElementAttribute (no focused element or accessibility permission issue)")
         }
         let focused = focusedRef as! AXUIElement
 
         var rangeRef: AnyObject?
         guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
               let rangeValue = rangeRef else {
-            gDebugPrint("AX: failed to read kAXSelectedTextRangeAttribute")
-            return false
+            return axFail("could not read kAXSelectedTextRangeAttribute from focused element")
         }
         var cursorRange = CFRange(location: 0, length: 0)
         guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &cursorRange) else {
-            gDebugPrint("AX: failed to extract CFRange from cursor range value")
-            return false
+            return axFail("kAXSelectedTextRangeAttribute value is not a CFRange")
         }
         gDebugPrint("AX: cursorRange location=\(cursorRange.location) length=\(cursorRange.length)")
 
         var isTextWritable: DarwinBoolean = false
-        guard AXUIElementIsAttributeSettable(focused, kAXSelectedTextAttribute as CFString, &isTextWritable) == .success,
-              isTextWritable.boolValue else {
-            gDebugPrint("AX: kAXSelectedTextAttribute is not writable, bailing")
-            return false
+        let writableStatus = AXUIElementIsAttributeSettable(focused, kAXSelectedTextAttribute as CFString, &isTextWritable)
+        guard writableStatus == .success else {
+            return axFail("could not query whether kAXSelectedTextAttribute is settable (AX status \(writableStatus.rawValue))")
+        }
+        guard isTextWritable.boolValue else {
+            return axFail("kAXSelectedTextAttribute is not writable on focused element (secure field, read-only control, or unsupported editor)")
         }
 
-        let inputCount = chord.input.count
         let leadingSpaceDeletionCount = resolved.backspacesBeforeOutput
-        guard cursorRange.location >= inputCount + leadingSpaceDeletionCount else {
-            gDebugPrint("AX: cursor location \(cursorRange.location) < inputCount \(inputCount) + leadingSpaceDeletionCount \(leadingSpaceDeletionCount), bailing")
-            return false
-        }
-
         var valueRef: AnyObject?
-        guard AXUIElementCopyAttributeValue(focused, kAXValueAttribute as CFString, &valueRef) == .success,
-              let fieldValue = valueRef as? String else {
-            gDebugPrint("AX: failed to read kAXValueAttribute")
-            return false
+        guard AXUIElementCopyAttributeValue(focused, kAXValueAttribute as CFString, &valueRef) == .success else {
+            return axFail("could not read kAXValueAttribute from focused element")
         }
-        let nsField = fieldValue as NSString
-        gDebugPrint("AX: fieldValue length=\(nsField.length) value=\(nsField)")
-        guard cursorRange.location <= nsField.length else {
-            gDebugPrint("AX: cursorRange.location \(cursorRange.location) > fieldValue.length \(nsField.length), bailing")
-            return false
+        guard let fieldValue = valueRef as? String else {
+            return axFail("kAXValueAttribute is not a String (got \(type(of: valueRef)))")
+        }
+        gDebugPrint("AX: fieldValue length=\((fieldValue as NSString).length) value='\(fieldValue)'")
+
+        let verified: AccessibilityReplacementVerification.VerifiedSelection
+        switch AccessibilityReplacementVerification.verifiedSelection(
+            fieldValue: fieldValue,
+            cursorRange: cursorRange,
+            chordInput: chord.input,
+            leadingSpaceDeletionCount: leadingSpaceDeletionCount
+        ) {
+        case let .failure(reason):
+            return axFail(reason.description)
+        case let .success(selection):
+            verified = selection
+            gDebugPrint("AX: verified selection startIndex=\(verified.startIndex) selectRange location=\(verified.selectRange.location) length=\(verified.selectRange.length)")
         }
 
-        var startIndex = cursorRange.location - inputCount
-        if leadingSpaceDeletionCount > 0 {
-            startIndex -= leadingSpaceDeletionCount
-            guard startIndex >= 0 else {
-                gDebugPrint("AX: leading space deletion would underflow field, bailing")
-                return false
-            }
-            let leadingCharacter = nsField.substring(with: NSRange(location: startIndex, length: 1))
-            guard leadingCharacter == " " else {
-                gDebugPrint("AX: expected leading space at \(startIndex), found '\(leadingCharacter)', bailing")
-                return false
-            }
+        var selectRange = verified.selectRange
+        guard let selectAXVal = AXValueCreate(.cfRange, &selectRange) else {
+            return axFail("could not create AXValue for selectRange location=\(verified.selectRange.location) length=\(verified.selectRange.length)")
         }
-        gDebugPrint("AX: inputCount=\(inputCount) startIndex=\(startIndex) leadingSpaceDeletionCount=\(leadingSpaceDeletionCount)")
-
-        let inputStartIndex = startIndex + leadingSpaceDeletionCount
-        let charsBeforeCursor = nsField.substring(with: NSRange(location: inputStartIndex, length: inputCount)).lowercased()
-        gDebugPrint("AX: charsBeforeCursor='\(charsBeforeCursor)' chordInput='\(chord.input.lowercased())'")
-        guard String(charsBeforeCursor.sorted()) == String(chord.input.lowercased().sorted()) else {
-            gDebugPrint("AX: charsBeforeCursor sorted '\(String(charsBeforeCursor.sorted()))' != chord input sorted '\(String(chord.input.lowercased().sorted()))', bailing")
-            return false
-        }
-
-        var selectRange = CFRange(
-            location: startIndex,
-            length: inputCount + leadingSpaceDeletionCount + cursorRange.length
-        )
-        gDebugPrint("AX: setting selectRange location=\(selectRange.location) length=\(selectRange.length)")
-        guard let selectAXVal = AXValueCreate(.cfRange, &selectRange) else { return false }
         guard AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, selectAXVal) == .success else {
-            gDebugPrint("AX: failed to set selectRange")
-            return false
+            return axFail("could not set kAXSelectedTextRangeAttribute to location=\(verified.selectRange.location) length=\(verified.selectRange.length)")
         }
 
         var selectedRef: AnyObject?
         guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &selectedRef) == .success,
               let selectedText = selectedRef as? String else {
-            gDebugPrint("AX: failed to read back kAXSelectedTextAttribute after selection, restoring cursor")
             restoreCursor(focused: focused, cursorRange: cursorRange)
-            return false
+            return axFail("could not read kAXSelectedTextAttribute after setting selection range; cursor restored")
         }
         gDebugPrint("AX: selectedText after selection='\(selectedText)'")
-        let selectedPrefix = String(selectedText.dropFirst(leadingSpaceDeletionCount).prefix(inputCount)).lowercased()
-        gDebugPrint("AX: selectedPrefix='\(selectedPrefix)' expected sorted='\(String(chord.input.lowercased().sorted()))'")
-        guard String(selectedPrefix.sorted()) == String(chord.input.lowercased().sorted()) else {
-            gDebugPrint("AX: selection verification failed, restoring cursor and bailing")
+
+        switch AccessibilityReplacementVerification.verifySelectedText(
+            selectedText,
+            chordInput: chord.input,
+            leadingSpaceDeletionCount: leadingSpaceDeletionCount
+        ) {
+        case let .failure(reason):
             restoreCursor(focused: focused, cursorRange: cursorRange)
-            return false
+            return axFail("\(reason.description); cursor restored")
+        case .success:
+            break
         }
 
-        let outputSegments = resolved.segments
-        let pipeLeftCount = resolved.leftArrowCount
-        let output = outputSegments.joined()
-
+        let output = resolved.outputText
         gDebugPrint("AX: writing output='\(output)'")
         guard AXUIElementSetAttributeValue(focused, kAXSelectedTextAttribute as CFString, output as CFTypeRef) == .success else {
-            gDebugPrint("AX: write failed, restoring cursor")
             restoreCursor(focused: focused, cursorRange: cursorRange)
-            return false
+            return axFail("kAXSelectedTextAttribute write rejected; cursor restored")
         }
 
         if let postValueRef = { var r: AnyObject?; AXUIElementCopyAttributeValue(focused, kAXValueAttribute as CFString, &r); return r }() as? String {
@@ -199,23 +173,47 @@ struct TextReplacer {
             }
         }
 
+        let pipeLeftCount = resolved.leftArrowCount
         if pipeLeftCount > 0 {
             var afterRangeRef: AnyObject?
-            if AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &afterRangeRef) == .success,
-               let afterRangeValue = afterRangeRef {
-                var afterRange = CFRange(location: 0, length: 0)
-                if AXValueGetValue(afterRangeValue as! AXValue, .cfRange, &afterRange) {
-                    let insertionEnd = afterRange.location + afterRange.length
-                    let finalLoc = max(0, insertionEnd - pipeLeftCount)
-                    var finalRange = CFRange(location: finalLoc, length: 0)
-                    if let finalAXVal = AXValueCreate(.cfRange, &finalRange) {
-                        AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, finalAXVal)
-                    }
-                }
+            guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &afterRangeRef) == .success,
+                  let afterRangeValue = afterRangeRef else {
+                gDebugPrint("AX: warning — could not read cursor range for pipe repositioning (output written successfully)")
+                gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
+                return true
             }
+            var afterRange = CFRange(location: 0, length: 0)
+            guard AXValueGetValue(afterRangeValue as! AXValue, .cfRange, &afterRange) else {
+                gDebugPrint("AX: warning — post-write cursor range is not a CFRange; pipe cursor not repositioned")
+                gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
+                return true
+            }
+            let insertionEnd = afterRange.location + afterRange.length
+            let finalLoc = AccessibilityReplacementVerification.pipeCursorLocation(
+                afterInsertionEnd: insertionEnd,
+                leftArrowCount: pipeLeftCount
+            )
+            var finalRange = CFRange(location: finalLoc, length: 0)
+            guard let finalAXVal = AXValueCreate(.cfRange, &finalRange) else {
+                gDebugPrint("AX: warning — could not create AXValue for pipe cursor at \(finalLoc)")
+                gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
+                return true
+            }
+            guard AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, finalAXVal) == .success else {
+                gDebugPrint("AX: warning — could not reposition cursor for pipe (target location \(finalLoc), leftArrowCount \(pipeLeftCount))")
+                gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
+                return true
+            }
+            gDebugPrint("AX: pipe cursor repositioned to location \(finalLoc) (leftArrowCount \(pipeLeftCount))")
         }
 
+        gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
         return true
+    }
+
+    private func axFail(_ reason: String) -> Bool {
+        gDebugPrint("AX: failed — \(reason); falling back to CGEvent")
+        return false
     }
 
     private func restoreCursor(focused: AXUIElement, cursorRange: CFRange) {
