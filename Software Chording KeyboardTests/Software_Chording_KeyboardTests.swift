@@ -81,7 +81,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertFalse(defaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: false))
 
         let pipedDefaultChord = Chord(input: "ab", output: "hel|lo")
-        XCTAssertFalse(pipedDefaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: true))
+        XCTAssertTrue(pipedDefaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: true))
         XCTAssertFalse(pipedDefaultChord.wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: false))
 
         let alwaysChord = Chord(input: "ab", output: "hel|lo", spaceBeforeOutputMode: .always)
@@ -171,7 +171,8 @@ final class Software_Chording_KeyboardTests: XCTestCase {
             return XCTFail("expected success, got \(result)")
         }
         XCTAssertEqual(verified.startIndex, 0)
-        XCTAssertEqual(verified.selectRange, CFRange(location: 0, length: 3))
+        XCTAssertEqual(verified.selectRange.location, 0)
+        XCTAssertEqual(verified.selectRange.length, 3)
     }
 
     func testAccessibilityReplacementVerificationRejectsMissingLeadingSpace() {
@@ -181,7 +182,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
             chordInput: "th",
             leadingSpaceDeletionCount: 1
         ) else {
-            XCTFail("expected expectedLeadingSpace failure")
+            return XCTFail("expected expectedLeadingSpace failure")
         }
     }
 
@@ -191,7 +192,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
             chordInput: "th",
             leadingSpaceDeletionCount: 1
         ) else {
-            XCTFail("expected success")
+            return XCTFail("expected success")
         }
         guard case .failure(.selectedTextMismatch(found: "to", expected: "th")) =
             AccessibilityReplacementVerification.verifySelectedText(
@@ -200,7 +201,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
                 leadingSpaceDeletionCount: 1
             )
         else {
-            XCTFail("expected selectedTextMismatch failure")
+            return XCTFail("expected selectedTextMismatch failure")
         }
     }
 
@@ -489,7 +490,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     }
 
     func testSettingsMigrationSkipsWhenVersionIsCurrent() {
-        let settings = AppSettings()
+        let settings = Self.makeTestSettings()
         settings.setMigrationVersion(SettingsMigration.currentMigrationVersion)
         XCTAssertFalse(SettingsMigration.run(on: settings))
     }
@@ -497,7 +498,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     // MARK: - KeyboardInputEngine
 
     func testKeyboardInputEngineShiftReleaseCyclesCapitalisationMode() {
-        let engine = KeyboardInputEngine(appSettings: AppSettings())
+        let engine = KeyboardInputEngine(appSettings: Self.makeTestSettings())
         let delegate = KeyboardInputEngineDelegateMock()
         engine.delegate = delegate
 
@@ -517,7 +518,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     }
 
     func testKeyboardInputEngineShiftReleaseWithInterveningKeyDoesNotCycleCapitalisation() {
-        let engine = KeyboardInputEngine(appSettings: AppSettings())
+        let engine = KeyboardInputEngine(appSettings: Self.makeTestSettings())
         let delegate = KeyboardInputEngineDelegateMock()
         engine.delegate = delegate
 
@@ -530,7 +531,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     }
 
     func testKeyboardInputEngineModifierKeyDownResetsSpacingState() {
-        let settings = AppSettings()
+        let settings = Self.makeTestSettings()
         settings.useAccessibilityAPI = false
         let chord = Chord(input: "th", output: "the")
         settings.addChord(chord: chord)
@@ -545,7 +546,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     }
 
     func testKeyboardInputEngineChordMatchSetsOwesTrailingSpaceFromPipe() {
-        let settings = AppSettings()
+        let settings = Self.makeTestSettings()
         settings.useAccessibilityAPI = false
 
         let withoutPipe = Chord(input: "th", output: "the")
@@ -563,7 +564,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
     }
 
     func testKeyboardInputEngineOwedSpaceKeyDownSchedulesEchoesBeforeAccumulatingKeys() {
-        let settings = AppSettings()
+        let settings = Self.makeTestSettings()
         settings.useAccessibilityAPI = false
         let chord = Chord(input: "th", output: "the")
         settings.addChord(chord: chord)
@@ -594,18 +595,279 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(engine.joinedHeldCharacters, "ht")
     }
 
+    // MARK: - OutputPlaceholderExpansion
+
+    func testOutputPlaceholderExpansionLeavesPlainTextUnchanged() {
+        XCTAssertEqual(OutputPlaceholderExpansion.expand("hello world"), "hello world")
+    }
+
+    func testOutputPlaceholderExpansionReplacesDateTokens() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 6
+        components.day = 5
+        components.hour = 14
+        components.minute = 30
+        let reference = Calendar.current.date(from: components)!
+
+        XCTAssertEqual(
+            OutputPlaceholderExpansion.expand("Today is {{yyyy-MM-dd}}", referenceDate: reference),
+            "Today is 2026-06-05"
+        )
+    }
+
+    func testOutputPlaceholderExpansionReplacesMultipleTokens() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 1
+        components.day = 2
+        let reference = Calendar.current.date(from: components)!
+
+        XCTAssertEqual(
+            OutputPlaceholderExpansion.expand("{{yyyy}}/{{MM}}", referenceDate: reference),
+            "2026/01"
+        )
+    }
+
+    // MARK: - Chord typing segments and decomposition
+
+    func testDecomposedOutputSplitsAtCursorPipe() {
+        let result = Chord.decomposedOutput(for: "hel|lo")
+        XCTAssertEqual(result.beforeCursor, "hel")
+        XCTAssertEqual(result.afterCursor, "lo")
+        XCTAssertTrue(result.hasPipe)
+        XCTAssertFalse(result.invalid)
+    }
+
+    func testDecomposedOutputTreatsEscapedPipeAsLiteral() {
+        let result = Chord.decomposedOutput(for: "a\\|b")
+        XCTAssertEqual(result.beforeCursor, "a|b")
+        XCTAssertEqual(result.afterCursor, "")
+        XCTAssertFalse(result.hasPipe)
+        XCTAssertFalse(result.invalid)
+    }
+
+    func testResolveTypingSegmentsSetsLeftArrowCountFromPipeSuffix() {
+        let chord = Chord(input: "ab", output: "hel|lo")
+        let (segments, leftArrowCount) = chord.resolveTypingSegments()
+        XCTAssertEqual(segments.joined(), "hello")
+        XCTAssertEqual(leftArrowCount, 2)
+    }
+
+    func testResolveTypingSegmentsExpandsPlaceholders() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 6
+        components.day = 5
+        let reference = Calendar.current.date(from: components)!
+
+        let chord = Chord(input: "ab", output: "{{yyyy}}")
+        let (segments, _) = chord.resolveTypingSegments(referenceDate: reference)
+        XCTAssertEqual(segments.joined(), "2026")
+    }
+
+    func testResolveTypingSegmentsAppliesSingleCharacterCapitalisation() {
+        let chord = Chord(input: "ab", output: "hello")
+        let (segments, _) = chord.resolveTypingSegments(capitalisationMode: .singleCharacter)
+        XCTAssertEqual(segments.joined(), "Hello")
+    }
+
+    func testResolveTypingSegmentsAppliesFullCapitalisation() {
+        let chord = Chord(input: "ab", output: "hello")
+        let (segments, _) = chord.resolveTypingSegments(capitalisationMode: .fullCapitalisation)
+        XCTAssertEqual(segments.joined(), "HELLO")
+    }
+
+    func testResolveTypingSegmentsAlwaysOriginalCaseIgnoresEngineCapitalisation() {
+        let chord = Chord(
+            input: "ab",
+            output: "HeLLo",
+            capitalisationMode: .alwaysOriginalCase
+        )
+        let (segments, _) = chord.resolveTypingSegments(capitalisationMode: .fullCapitalisation)
+        XCTAssertEqual(segments.joined(), "HeLLo")
+    }
+
+    func testStringChunkedSplitsLongOutputIntoSegments() {
+        let long = String(repeating: "a", count: 25)
+        XCTAssertEqual(long.chunked(into: 10).count, 3)
+        XCTAssertEqual(long.chunked(into: 10).joined(), long)
+    }
+
+    // MARK: - AccessibilityReplacementVerification (additional failures)
+
+    func testAccessibilityReplacementVerificationRejectsCursorTooEarly() {
+        guard case .failure(.cursorTooEarly(cursorLocation: 1, inputCount: 2, leadingSpaceDeletionCount: 0)) =
+            AccessibilityReplacementVerification.verifiedSelection(
+                fieldValue: "th",
+                cursorRange: CFRange(location: 1, length: 0),
+                chordInput: "th",
+                leadingSpaceDeletionCount: 0
+            )
+        else {
+            return XCTFail("expected cursorTooEarly failure")
+        }
+    }
+
+    func testAccessibilityReplacementVerificationRejectsCursorPastFieldEnd() {
+        guard case .failure(.cursorPastFieldEnd(cursorLocation: 5, fieldLength: 2)) =
+            AccessibilityReplacementVerification.verifiedSelection(
+                fieldValue: "th",
+                cursorRange: CFRange(location: 5, length: 0),
+                chordInput: "th",
+                leadingSpaceDeletionCount: 0
+            )
+        else {
+            return XCTFail("expected cursorPastFieldEnd failure")
+        }
+    }
+
+    func testAccessibilityReplacementVerificationRejectsLeadingSpaceDeletionUnderflow() {
+        guard case .failure(.cursorTooEarly(cursorLocation: 2, inputCount: 2, leadingSpaceDeletionCount: 1)) =
+            AccessibilityReplacementVerification.verifiedSelection(
+                fieldValue: "th",
+                cursorRange: CFRange(location: 2, length: 0),
+                chordInput: "th",
+                leadingSpaceDeletionCount: 1
+            )
+        else {
+            return XCTFail("expected cursorTooEarly failure when leading-space deletion would underflow")
+        }
+    }
+
+    func testAccessibilityReplacementVerificationRejectsInputMismatch() {
+        guard case .failure(.inputMismatch(found: "to", expected: "th")) =
+            AccessibilityReplacementVerification.verifiedSelection(
+                fieldValue: "to",
+                cursorRange: CFRange(location: 2, length: 0),
+                chordInput: "th",
+                leadingSpaceDeletionCount: 0
+            )
+        else {
+            return XCTFail("expected inputMismatch failure")
+        }
+    }
+
+    // MARK: - AppSettings
+
+    func testAppSettingsDetectsDuplicateNormalisedInputKeys() {
+        let settings = Self.makeTestSettings()
+        settings.parseSettingsFromJson(json: """
+        { "millisecondsToHold": "100ms", "chords": [] }
+        """)
+        settings.addChord(chord: Chord(id: "a", input: "ab", output: "one"))
+        settings.addChord(chord: Chord(id: "b", input: "ba", output: "two"))
+        XCTAssertEqual(settings.duplicateNormalisedInputKeys, ["ab"])
+        XCTAssertEqual(settings.alphabeticalInputOutputMappingDictionary["ab"]?.id, "b")
+    }
+
+    func testAppSettingsParseSettingsFromJson() {
+        let settings = Self.makeTestSettings()
+        settings.parseSettingsFromJson(json: """
+        {
+          "millisecondsToHold": "150ms",
+          "useAccessibilityAPI": false,
+          "chords": [
+            {
+              "id": "chord-1",
+              "input": "th",
+              "output": "the",
+              "capitalisationMode": "alwaysOriginalCase",
+              "spaceBeforeOutput": "never"
+            }
+          ]
+        }
+        """)
+        XCTAssertEqual(settings.millisecondsToHoldStr, "150ms")
+        XCTAssertEqual(settings.millisecondsToHold, 150)
+        XCTAssertFalse(settings.useAccessibilityAPI)
+        XCTAssertEqual(settings.chords.count, 1)
+        XCTAssertEqual(settings.chords.first?.capitalisationMode, .alwaysOriginalCase)
+        XCTAssertEqual(settings.chords.first?.spaceBeforeOutputMode, .never)
+    }
+
+    func testAppSettingsSerialiseAndParseRoundTripOmitsUsage() throws {
+        let settings = Self.makeTestSettings()
+        settings.parseSettingsFromJson(json: """
+        {
+          "millisecondsToHold": "100ms",
+          "chords": [
+            {
+              "id": "chord-1",
+              "input": "th",
+              "output": "the"
+            }
+          ]
+        }
+        """)
+        settings.chords.first?.incrementUsageCount(for: "machine-a")
+
+        let json = settings.getSettingsJsonString()
+        XCTAssertFalse(json.contains("usage"))
+        XCTAssertFalse(json.contains("usageCount"))
+
+        let reparsed = Self.makeTestSettings()
+        reparsed.parseSettingsFromJson(json: json)
+        XCTAssertEqual(reparsed.chords.first?.input, "th")
+        XCTAssertEqual(reparsed.chords.first?.totalUsageCount, 0)
+    }
+
+    // MARK: - ChordUsageStore
+
+    func testMachineUsageStatsDecodesLegacyUsageByInputKey() throws {
+        let json = """
+        {
+          "usageByInput": {
+            "abc": 5
+          }
+        }
+        """
+        let stats = try JSONDecoder().decode(MachineUsageStats.self, from: Data(json.utf8))
+        XCTAssertTrue(stats.hasLegacyInputKeys)
+        XCTAssertEqual(stats.legacyUsageByInput["abc"], 5)
+    }
+
+    func testChordUsageStoreMergedUsageOnDiskKeepsHighestCount() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let fileURL = ChordUsageStore.statsFileURL(for: "machine-a", in: root)
+        try ChordUsageStore.saveMachineUsage(
+            MachineUsageStats(usageByChordId: ["chord-1": 3]),
+            to: fileURL
+        )
+
+        let merged = ChordUsageStore.mergedUsageOnDisk(
+            at: fileURL,
+            with: MachineUsageStats(usageByChordId: ["chord-1": 7, "chord-2": 1])
+        )
+        XCTAssertEqual(merged.usageByChordId["chord-1"], 7)
+        XCTAssertEqual(merged.usageByChordId["chord-2"], 1)
+    }
+
+    // MARK: - TextReplacer
+
+    func testTextReplacerInsertOwedSpaceBeforeReturnsEchoCount() {
+        XCTAssertEqual(TextReplacer().insertOwedSpaceBefore(character: "a"), 4)
+    }
+
+    func testTextReplacerReplaceViaSyntheticKeysReturnsEchoCount() {
+        let chord = Chord(input: "th", output: "the")
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: false)
+        let echoCount = TextReplacer().replaceViaSyntheticKeys(chord: chord, resolved: resolved)
+        XCTAssertEqual(echoCount, resolved.syntheticKeyEchoCount(inputDeleteCount: chord.deleteCount))
+    }
+
+    private static func makeTestSettings() -> AppSettings {
+        AppSettings.makeForTesting()
+    }
+
     private static func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent {
-        NSEvent.otherEvent(
-            with: .flagsChanged,
-            location: .zero,
-            modifierFlags: modifierFlags,
-            timestamp: ProcessInfo.processInfo.systemUptime,
-            windowNumber: 0,
-            context: nil,
-            subtype: 0,
-            data1: 0,
-            data2: 0
-        )!
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let cgEvent = CGEvent(keyboardEventSource: source, virtualKey: 0x38, keyDown: true)!
+        cgEvent.type = .flagsChanged
+        cgEvent.flags = CGEventFlags(rawValue: UInt64(modifierFlags.rawValue))
+        return NSEvent(cgEvent: cgEvent)!
     }
 
     private static func keyDownEvent(

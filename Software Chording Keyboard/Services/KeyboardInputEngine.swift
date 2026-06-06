@@ -79,10 +79,6 @@ final class KeyboardInputEngine {
     }
 
     func handleKeyDown(_ event: NSEvent) {
-        if chordDetection.consumeEchoIfPending() {
-            return
-        }
-
         let eventKey = event.keyCode
         let character = event.characters
         gDebugPrint("eventKey \(eventKey) character \(character)")
@@ -94,6 +90,10 @@ final class KeyboardInputEngine {
             chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
+            return
+        }
+
+        if chordDetection.consumeEchoIfPending() {
             return
         }
 

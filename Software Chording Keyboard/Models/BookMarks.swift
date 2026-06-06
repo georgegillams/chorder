@@ -44,6 +44,9 @@ import Foundation
     }
 
     func dump() {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return
+        }
         let path = Self.path()
         do {
             try NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: true).write(to: path)

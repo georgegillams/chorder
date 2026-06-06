@@ -79,6 +79,8 @@
 		A2B3C4D7092DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityReplacementVerification.swift; sourceTree = "<group>"; };
 		H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputEngine.swift; sourceTree = "<group>"; };
 		G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+StatusBar.swift"; sourceTree = "<group>"; };
+		TPLN000229DE19F90081AB4E /* AllTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllTests.xctestplan; sourceTree = "<group>"; };
+		TPLN000129DE19F90081AB4E /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +123,7 @@
 				08E19EF029DE19F80081AB4E /* Software Chording Keyboard */,
 				08E19F0229DE19F90081AB4E /* Software Chording KeyboardTests */,
 				08E19F0C29DE19F90081AB4E /* Software Chording KeyboardUITests */,
+				TPLN000029DE19F90081AB4E /* TestPlans */,
 				08E19EEF29DE19F80081AB4E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -211,6 +214,15 @@
 				08E19F2329DE1CAD0081AB4E /* Settings.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		TPLN000029DE19F90081AB4E /* TestPlans */ = {
+			isa = PBXGroup;
+			children = (
+				TPLN000129DE19F90081AB4E /* UnitTests.xctestplan */,
+				TPLN000229DE19F90081AB4E /* AllTests.xctestplan */,
+			);
+			path = TestPlans;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
