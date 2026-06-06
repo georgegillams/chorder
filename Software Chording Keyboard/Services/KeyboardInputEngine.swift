@@ -1,13 +1,52 @@
 //
-//  AppDelegate+Keyboard.swift
+//  KeyboardInputEngine.swift
 //  Software Chording Keyboard
 //
 
 import AppKit
 import Foundation
 
-extension AppDelegate {
-    func flagsChangedHandler(event: NSEvent) {
+protocol KeyboardInputEngineDelegate: AnyObject {
+    func keyboardInputEngine(_ engine: KeyboardInputEngine, capitalisationModeDidChange mode: CapitalisationMode)
+}
+
+/// Handles global keyboard input: chord detection, replacement, spacing, and capitalisation.
+final class KeyboardInputEngine {
+    weak var delegate: KeyboardInputEngineDelegate?
+
+    private let appSettings: AppSettings
+    private let chordDetection = ChordDetectionState()
+    private let textReplacer = TextReplacer()
+
+    private var owedSpace = false
+    private var autoInsertedSpaceBeforeCurrentInput = false
+    private var shiftPressedDown = false
+    private(set) var capitalisationMode = CapitalisationMode.off
+    private var otherKeysPressedDuringShift = false
+
+    var calculatedCapitalisationMode: CapitalisationMode {
+        if shiftPressedDown {
+            return .fullCapitalisation
+        }
+        return capitalisationMode
+    }
+
+    var owesTrailingSpace: Bool { owedSpace }
+    var joinedHeldCharacters: String { chordDetection.joinedCharactersLowercased() }
+
+    init(appSettings: AppSettings) {
+        self.appSettings = appSettings
+
+        chordDetection.onChordMatched = { [weak self] normalisedInputKey in
+            self?.handleChordMatch(normalisedInputKey: normalisedInputKey)
+        }
+        chordDetection.isRegisteredChord = { [weak self] normalisedKey in
+            guard let self else { return false }
+            return self.appSettings.alphabeticalInputOutputMappingDictionary[normalisedKey] != nil
+        }
+    }
+
+    func handleFlagsChanged(_ event: NSEvent) {
         // This is fired whenever shift is toggled, but we have to track its state ourselves
         if event.modifierFlags.contains(.shift) {
             shiftPressedDown = true
@@ -22,24 +61,24 @@ extension AppDelegate {
             // If characters were entered while holding shift, then we'll assume the intent of holding shift was to capitalise those letters, and not to turn on capitilisation mode
             if otherKeysPressedDuringShift {
                 otherKeysPressedDuringShift = false
-                capitalisationMode = .off
+                setCapitalisationMode(.off)
                 return
             }
 
             // When shift is released again, but only if no other keys have been pressed in the meantime.
             switch capitalisationMode {
             case .off:
-                capitalisationMode = .singleCharacter
+                setCapitalisationMode(.singleCharacter)
             case .singleCharacter:
-                capitalisationMode = .fullCapitalisation
+                setCapitalisationMode(.fullCapitalisation)
             case .fullCapitalisation:
-                capitalisationMode = .off
+                setCapitalisationMode(.off)
             }
         }
         gDebugPrint("shift pressed \(shiftPressedDown)")
     }
 
-    func keyDownHandler(event: NSEvent) {
+    func handleKeyDown(_ event: NSEvent) {
         if chordDetection.consumeEchoIfPending() {
             return
         }
@@ -51,7 +90,7 @@ extension AppDelegate {
         // Modifier shortcuts are not chord input; clear any in-progress detection.
         if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
             || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.function) {
-            capitalisationMode = .off
+            setCapitalisationMode(.off)
             chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
@@ -65,7 +104,7 @@ extension AppDelegate {
 
         // Ignore space and backspace and clear held keys
         if eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.tabEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.escapeEventKey {
-            capitalisationMode = .off
+            setCapitalisationMode(.off)
             chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
@@ -74,7 +113,7 @@ extension AppDelegate {
 
         // If navigating through text, clear everything
         if eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey {
-            capitalisationMode = .off
+            setCapitalisationMode(.off)
             chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
@@ -102,25 +141,25 @@ extension AppDelegate {
         chordDetection.keyDown(
             keyCode: eventKey,
             character: character,
-            holdDuration: appModel.appSettings.millisecondsToHold / 1000
+            holdDuration: appSettings.millisecondsToHold / 1000
         )
         gDebugPrint("chordDetection phase \(chordDetection.phase) joined \(chordDetection.joinedCharactersLowercased())")
     }
 
-    func keyUpHandler(event: NSEvent) {
+    func handleKeyUp(_ event: NSEvent) {
         if chordDetection.consumeEchoIfPending() {
             return
         }
 
         chordDetection.keyUp(
             keyCode: event.keyCode,
-            holdDuration: appModel.appSettings.millisecondsToHold / 1000
+            holdDuration: appSettings.millisecondsToHold / 1000
         )
         gDebugPrint("chordDetection phase \(chordDetection.phase) joined \(chordDetection.joinedCharactersLowercased())")
     }
 
     func handleChordMatch(normalisedInputKey: String) {
-        guard let chord = appModel.appSettings.alphabeticalInputOutputMappingDictionary[normalisedInputKey] else {
+        guard let chord = appSettings.alphabeticalInputOutputMappingDictionary[normalisedInputKey] else {
             gDebugPrint("No chord for normalised input '\(normalisedInputKey)'")
             chordDetection.resumeAccumulating()
             return
@@ -130,20 +169,20 @@ extension AppDelegate {
         chordDetection.beginReplacement()
 
         replaceCharacters(chord: chord)
-        appModel.appSettings.incrementUsage(for: chord)
-        appModel.appSettings.setUsageCountDirty()
-        capitalisationMode = .off
+        appSettings.incrementUsage(for: chord)
+        appSettings.setUsageCountDirty()
+        setCapitalisationMode(.off)
 
         chordDetection.endReplacementIfNoPendingEchoes()
     }
 
-    func replaceCharacters(chord: Chord) {
+    private func replaceCharacters(chord: Chord) {
         let resolved = chord.resolveReplacement(
             capitalisationMode: calculatedCapitalisationMode,
             autoInsertedSpaceBeforeInput: autoInsertedSpaceBeforeCurrentInput
         )
 
-        if appModel.appSettings.useAccessibilityAPI && textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
+        if appSettings.useAccessibilityAPI && textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
             gDebugPrint("replaced via AX")
             updatePostReplacementSpacingState(for: chord)
             return
@@ -154,8 +193,14 @@ extension AppDelegate {
         updatePostReplacementSpacingState(for: chord)
     }
 
-    func updatePostReplacementSpacingState(for chord: Chord) {
+    private func updatePostReplacementSpacingState(for chord: Chord) {
         autoInsertedSpaceBeforeCurrentInput = false
         owedSpace = !chord.hasPipe
+    }
+
+    private func setCapitalisationMode(_ mode: CapitalisationMode) {
+        guard capitalisationMode != mode else { return }
+        capitalisationMode = mode
+        delegate?.keyboardInputEngine(self, capitalisationModeDidChange: mode)
     }
 }

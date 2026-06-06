@@ -75,7 +75,7 @@ import SwiftUI
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let appModel = AppModel()
     let permissionCoordinator = PermissionCoordinator()
-    let textReplacer = TextReplacer()
+    lazy var keyboardEngine = KeyboardInputEngine(appSettings: appModel.appSettings)
 
     var windowsOpen = 0
     var statusBarItem: NSStatusItem!
@@ -87,24 +87,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var workspaceWakeObserver: NSObjectProtocol?
     private var globalEventMonitors: [Any] = []
     private var didShowGlobalMonitorFailureAlert = false
-
-    let chordDetection = ChordDetectionState()
-    var owedSpace = false
-    var autoInsertedSpaceBeforeCurrentInput = false
-    var shiftPressedDown = false
-    var capitalisationMode = CapitalisationMode.off {
-        didSet {
-            updateMenuBarIcon()
-        }
-    }
-    var otherKeysPressedDuringShift = false
-
-    var calculatedCapitalisationMode: CapitalisationMode {
-        if shiftPressedDown {
-            return .fullCapitalisation
-        }
-        return capitalisationMode
-    }
 
     // MARK: - Permission Checking Methods
 
@@ -135,13 +117,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         updateActivationPolicy()
 
-        chordDetection.onChordMatched = { [weak self] normalisedInputKey in
-            self?.handleChordMatch(normalisedInputKey: normalisedInputKey)
-        }
-        chordDetection.isRegisteredChord = { [weak self] normalisedKey in
-            guard let self else { return false }
-            return self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[normalisedKey] != nil
-        }
+        keyboardEngine.delegate = self
 
         permissionCoordinator.beginPermissionChecks()
         createStatusBarButton()
@@ -156,9 +132,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func registerGlobalEventMonitors() {
         let monitors: [Any?] = [
-            NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler),
-            NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler),
-            NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler),
+            NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                self?.keyboardEngine.handleFlagsChanged(event)
+            },
+            NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                self?.keyboardEngine.handleKeyDown(event)
+            },
+            NSEvent.addGlobalMonitorForEvents(matching: .keyUp) { [weak self] event in
+                self?.keyboardEngine.handleKeyUp(event)
+            },
         ]
         globalEventMonitors = monitors.compactMap { $0 }
 
@@ -234,3 +216,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 }
 
 extension AppDelegate: SettingsActions {}
+
+extension AppDelegate: KeyboardInputEngineDelegate {
+    func keyboardInputEngine(_ engine: KeyboardInputEngine, capitalisationModeDidChange mode: CapitalisationMode) {
+        updateMenuBarIcon()
+    }
+}

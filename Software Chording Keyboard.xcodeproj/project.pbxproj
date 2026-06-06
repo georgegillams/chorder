@@ -28,7 +28,7 @@
 		E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */; };
 		F1A2B3C5032DA6B2D200B360A6 /* PermissionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */; };
 		F1A2B3C5052DA6B2D200B360A6 /* TextReplacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */; };
-		G2B3C4D6032DA6B2D200B360A7 /* AppDelegate+Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */; };
+		H3C4D5E7022DA6B2D200B360A8 /* KeyboardInputEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */; };
 		G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */; };
 /* End PBXBuildFile section */
 
@@ -75,7 +75,7 @@
 		E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordDetectionState.swift; sourceTree = "<group>"; };
 		F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCoordinator.swift; sourceTree = "<group>"; };
 		F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextReplacer.swift; sourceTree = "<group>"; };
-		G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Keyboard.swift"; sourceTree = "<group>"; };
+		H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputEngine.swift; sourceTree = "<group>"; };
 		G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+StatusBar.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -143,7 +143,6 @@
 				08E19F1D29DE1A760081AB4E /* Models */,
 				08E19F1C29DE1A3C0081AB4E /* Trunk */,
 				08E19EF129DE19F80081AB4E /* AppDelegate.swift */,
-				G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */,
 				G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */,
 				08E19EF529DE19F90081AB4E /* Assets.xcassets */,
 			);
@@ -154,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */,
+				H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */,
 				F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */,
 			);
 			path = Services;
@@ -361,7 +361,7 @@
 				E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */,
 				F1A2B3C5032DA6B2D200B360A6 /* PermissionCoordinator.swift in Sources */,
 				F1A2B3C5052DA6B2D200B360A6 /* TextReplacer.swift in Sources */,
-				G2B3C4D6032DA6B2D200B360A7 /* AppDelegate+Keyboard.swift in Sources */,
+				H3C4D5E7022DA6B2D200B360A8 /* KeyboardInputEngine.swift in Sources */,
 				G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

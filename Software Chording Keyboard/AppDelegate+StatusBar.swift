@@ -24,7 +24,7 @@ extension AppDelegate {
     func updateMenuBarIcon() {
         let accessibilityDescription = "\(getTargetName()) Preferences"
 
-        switch calculatedCapitalisationMode {
+        switch keyboardEngine.calculatedCapitalisationMode {
         case .off:
             statusBarItem.button?.image = NSImage(systemSymbolName: "keyboard.fill", accessibilityDescription: accessibilityDescription)
         case .singleCharacter:

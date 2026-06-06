@@ -5,6 +5,7 @@
 //  Created by George Gillams on 05/04/2023.
 //
 
+import AppKit
 import XCTest
 @testable import Software_Chording_Keyboard
 
@@ -417,4 +418,140 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertFalse(SettingsMigration.run(on: settings))
     }
 
+    // MARK: - KeyboardInputEngine
+
+    func testKeyboardInputEngineShiftReleaseCyclesCapitalisationMode() {
+        let engine = KeyboardInputEngine(appSettings: AppSettings())
+        let delegate = KeyboardInputEngineDelegateMock()
+        engine.delegate = delegate
+
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: .shift))
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: []))
+        XCTAssertEqual(engine.capitalisationMode, .singleCharacter)
+
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: .shift))
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: []))
+        XCTAssertEqual(engine.capitalisationMode, .fullCapitalisation)
+
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: .shift))
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: []))
+        XCTAssertEqual(engine.capitalisationMode, .off)
+
+        XCTAssertEqual(delegate.modes, [.singleCharacter, .fullCapitalisation, .off])
+    }
+
+    func testKeyboardInputEngineShiftReleaseWithInterveningKeyDoesNotCycleCapitalisation() {
+        let engine = KeyboardInputEngine(appSettings: AppSettings())
+        let delegate = KeyboardInputEngineDelegateMock()
+        engine.delegate = delegate
+
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: .shift))
+        engine.handleKeyDown(Self.keyDownEvent(keyCode: 17, characters: "t")!)
+        engine.handleFlagsChanged(Self.flagsChangedEvent(modifierFlags: []))
+
+        XCTAssertEqual(engine.capitalisationMode, .off)
+        XCTAssertTrue(delegate.modes.isEmpty)
+    }
+
+    func testKeyboardInputEngineModifierKeyDownResetsSpacingState() {
+        let settings = AppSettings()
+        settings.useAccessibilityAPI = false
+        let chord = Chord(input: "th", output: "the")
+        settings.addChord(chord: chord)
+
+        let engine = KeyboardInputEngine(appSettings: settings)
+        engine.handleChordMatch(normalisedInputKey: "ht")
+        XCTAssertTrue(engine.owesTrailingSpace)
+
+        engine.handleKeyDown(Self.keyDownEvent(keyCode: 17, characters: "a", modifierFlags: .command)!)
+        XCTAssertFalse(engine.owesTrailingSpace)
+        XCTAssertEqual(engine.joinedHeldCharacters, "")
+    }
+
+    func testKeyboardInputEngineChordMatchSetsOwesTrailingSpaceFromPipe() {
+        let settings = AppSettings()
+        settings.useAccessibilityAPI = false
+
+        let withoutPipe = Chord(input: "th", output: "the")
+        settings.addChord(chord: withoutPipe)
+        let withPipe = Chord(input: "ab", output: "a|b")
+        settings.addChord(chord: withPipe)
+
+        let engine = KeyboardInputEngine(appSettings: settings)
+
+        engine.handleChordMatch(normalisedInputKey: "ht")
+        XCTAssertTrue(engine.owesTrailingSpace)
+
+        engine.handleChordMatch(normalisedInputKey: "ab")
+        XCTAssertFalse(engine.owesTrailingSpace)
+    }
+
+    func testKeyboardInputEngineOwedSpaceKeyDownSchedulesEchoesBeforeAccumulatingKeys() {
+        let settings = AppSettings()
+        settings.useAccessibilityAPI = false
+        let chord = Chord(input: "th", output: "the")
+        settings.addChord(chord: chord)
+
+        let engine = KeyboardInputEngine(appSettings: settings)
+        engine.handleChordMatch(normalisedInputKey: "ht")
+        XCTAssertTrue(engine.owesTrailingSpace)
+
+        let resolved = chord.resolveReplacement(
+            capitalisationMode: .off,
+            autoInsertedSpaceBeforeInput: false
+        )
+        let syntheticKeyPressCount = chord.deleteCount + 1 + resolved.backspacesBeforeOutput + resolved.leftArrowCount
+        let replacementEchoCount = (2 * syntheticKeyPressCount) + (2 * resolved.segments.count) + 2
+
+        for _ in 0..<replacementEchoCount {
+            engine.handleKeyDown(Self.keyDownEvent(keyCode: 0, characters: "*")!)
+        }
+
+        engine.handleKeyDown(Self.keyDownEvent(keyCode: 4, characters: "h")!)
+        XCTAssertEqual(engine.joinedHeldCharacters, "h")
+
+        for _ in 0..<4 {
+            engine.handleKeyDown(Self.keyDownEvent(keyCode: 0, characters: "*")!)
+            XCTAssertEqual(engine.joinedHeldCharacters, "h")
+        }
+
+        engine.handleKeyDown(Self.keyDownEvent(keyCode: 17, characters: "t")!)
+        XCTAssertEqual(engine.joinedHeldCharacters, "ht")
+    }
+
+    private static func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent {
+        NSEvent.otherEvent(
+            with: .flagsChanged,
+            location: .zero,
+            modifierFlags: modifierFlags,
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0,
+            context: nil,
+            subtype: 0,
+            data1: 0,
+            data2: 0
+        )!
+    }
+
+    private static func keyDownEvent(
+        keyCode: UInt16,
+        characters: String,
+        modifierFlags: NSEvent.ModifierFlags = []
+    ) -> NSEvent? {
+        let utf16 = Array(characters.utf16)
+        guard let cgEvent = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(keyCode), keyDown: true) else {
+            return nil
+        }
+        cgEvent.flags = CGEventFlags(rawValue: UInt64(modifierFlags.rawValue))
+        cgEvent.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
+        return NSEvent(cgEvent: cgEvent)
+    }
+}
+
+private final class KeyboardInputEngineDelegateMock: KeyboardInputEngineDelegate {
+    private(set) var modes: [CapitalisationMode] = []
+
+    func keyboardInputEngine(_ engine: KeyboardInputEngine, capitalisationModeDidChange mode: CapitalisationMode) {
+        modes.append(mode)
+    }
 }
