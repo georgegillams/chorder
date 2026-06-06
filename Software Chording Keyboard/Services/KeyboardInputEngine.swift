@@ -182,13 +182,17 @@ final class KeyboardInputEngine {
             autoInsertedSpaceBeforeInput: autoInsertedSpaceBeforeCurrentInput
         )
 
-        if appSettings.useAccessibilityAPI && textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
-            gDebugPrint("replaced via AX")
-            updatePostReplacementSpacingState(for: chord)
-            return
+        if appSettings.useAccessibilityAPI {
+            if textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
+                gDebugPrint("replaced via AX")
+                updatePostReplacementSpacingState(for: chord)
+                return
+            }
+        } else {
+            gDebugPrint("AX: skipped — useAccessibilityAPI setting is off")
         }
 
-        gDebugPrint("AX replacement disabled or failed, falling back to CGEvent")
+        gDebugPrint("using CGEvent synthetic key replacement")
         chordDetection.scheduleEchoes(textReplacer.replaceViaSyntheticKeys(chord: chord, resolved: resolved))
         updatePostReplacementSpacingState(for: chord)
     }

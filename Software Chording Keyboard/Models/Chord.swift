@@ -107,6 +107,16 @@ struct ResolvedChordReplacement {
     let leftArrowCount: Int
     /// Extra backspaces before typing output, to remove an auto-inserted leading space.
     let backspacesBeforeOutput: Int
+
+    var outputText: String { segments.joined() }
+
+    /// Monitor callbacks to ignore after synthetic key replacement.
+    /// `inputDeleteCount` is the number of chord input characters to remove.
+    /// Includes the extra sentinel `*` keypress (+1) in the delete phase.
+    func syntheticKeyEchoCount(inputDeleteCount: Int) -> Int {
+        let syntheticKeyPressCount = inputDeleteCount + 1 + backspacesBeforeOutput + leftArrowCount
+        return (2 * syntheticKeyPressCount) + (2 * segments.count) + 2
+    }
 }
 
 /// A chord definition stored in settings. This is a reference type: update chords through

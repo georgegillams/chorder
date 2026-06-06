@@ -53,7 +53,7 @@ import SwiftUI
  - [x] When a key is released, we remove it from the list of currently pressed keys.
  - [x] When a key is pressed, we trigger a delay for the chord hold timespan. If after this time, the same combination of keys is pressed, we consider this a chord.
  - [ ] When a chord is detected, it is added to the chord history. At this point, if the chord matches one of our config, the letters typed are removed and the chord output typed.
- - [ ] ROADMAP: Chained chords — if the last two chords form a chained chord, remove both inputs and replace with the chained output.
+ - [ ] Support Chained chords — if the last two chords form a chained chord, remove both inputs and replace with the chained output.
  - [x] Share replacement code between AX and CGEvent paths (`TextReplacer`)
 
  ## Spaces

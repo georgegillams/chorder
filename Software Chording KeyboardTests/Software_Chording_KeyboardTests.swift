@@ -139,6 +139,82 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(resolved.backspacesBeforeOutput, 1)
     }
 
+    func testResolvedReplacementOutputTextJoinsSegments() {
+        let chord = Chord(input: "ab", output: "a|b")
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: false)
+        XCTAssertEqual(resolved.outputText, resolved.segments.joined())
+    }
+
+    func testResolvedReplacementSyntheticKeyEchoCount() {
+        let chord = Chord(input: "th", output: "the")
+        let resolved = chord.resolveReplacement(autoInsertedSpaceBeforeInput: false)
+        XCTAssertEqual(
+            resolved.syntheticKeyEchoCount(inputDeleteCount: chord.deleteCount),
+            (2 * (chord.deleteCount + 1 + resolved.backspacesBeforeOutput + resolved.leftArrowCount))
+                + (2 * resolved.segments.count) + 2
+        )
+    }
+
+    func testAccessibilityReplacementVerificationMatchesSortedInput() {
+        XCTAssertTrue(AccessibilityReplacementVerification.sortedInputMatches("ht", chordInput: "th"))
+        XCTAssertFalse(AccessibilityReplacementVerification.sortedInputMatches("to", chordInput: "th"))
+    }
+
+    func testAccessibilityReplacementVerificationComputesSelectionRange() {
+        let result = AccessibilityReplacementVerification.verifiedSelection(
+            fieldValue: " th",
+            cursorRange: CFRange(location: 3, length: 0),
+            chordInput: "th",
+            leadingSpaceDeletionCount: 1
+        )
+        guard case let .success(verified) = result else {
+            return XCTFail("expected success, got \(result)")
+        }
+        XCTAssertEqual(verified.startIndex, 0)
+        XCTAssertEqual(verified.selectRange, CFRange(location: 0, length: 3))
+    }
+
+    func testAccessibilityReplacementVerificationRejectsMissingLeadingSpace() {
+        guard case .failure(.expectedLeadingSpace(at: 0, found: "x")) = AccessibilityReplacementVerification.verifiedSelection(
+            fieldValue: "xth",
+            cursorRange: CFRange(location: 3, length: 0),
+            chordInput: "th",
+            leadingSpaceDeletionCount: 1
+        ) else {
+            XCTFail("expected expectedLeadingSpace failure")
+        }
+    }
+
+    func testAccessibilityReplacementVerificationSelectedTextPrefix() {
+        guard case .success = AccessibilityReplacementVerification.verifySelectedText(
+            " th",
+            chordInput: "th",
+            leadingSpaceDeletionCount: 1
+        ) else {
+            XCTFail("expected success")
+        }
+        guard case .failure(.selectedTextMismatch(found: "to", expected: "th")) =
+            AccessibilityReplacementVerification.verifySelectedText(
+                " to",
+                chordInput: "th",
+                leadingSpaceDeletionCount: 1
+            )
+        else {
+            XCTFail("expected selectedTextMismatch failure")
+        }
+    }
+
+    func testAccessibilityReplacementVerificationPipeCursorLocation() {
+        XCTAssertEqual(
+            AccessibilityReplacementVerification.pipeCursorLocation(afterInsertionEnd: 10, leftArrowCount: 3),
+            7
+        )
+        XCTAssertEqual(
+            AccessibilityReplacementVerification.pipeCursorLocation(afterInsertionEnd: 2, leftArrowCount: 5),
+            0
+        )
+    }
+
     func testChordAssignsIdOnCreation() {
         let chord = Chord(input: "abc", output: "hello")
         XCTAssertFalse(chord.id.isEmpty)
@@ -500,8 +576,7 @@ final class Software_Chording_KeyboardTests: XCTestCase {
             capitalisationMode: .off,
             autoInsertedSpaceBeforeInput: false
         )
-        let syntheticKeyPressCount = chord.deleteCount + 1 + resolved.backspacesBeforeOutput + resolved.leftArrowCount
-        let replacementEchoCount = (2 * syntheticKeyPressCount) + (2 * resolved.segments.count) + 2
+        let replacementEchoCount = resolved.syntheticKeyEchoCount(inputDeleteCount: chord.deleteCount)
 
         for _ in 0..<replacementEchoCount {
             engine.handleKeyDown(Self.keyDownEvent(keyCode: 0, characters: "*")!)
