@@ -88,6 +88,17 @@ private struct ChordEditorSheet: View {
         case output
     }
 
+    private var canSave: Bool {
+        !Chord.normalisedInputKey(for: input).isEmpty && Chord.isValidOutput(output)
+    }
+
+    private var outputValidationMessage: String? {
+        guard !output.isEmpty, !Chord.isValidOutput(output) else {
+            return nil
+        }
+        return "Output can contain at most one | (pipe) for cursor placement. Escape extra pipes with \\|."
+    }
+
     private var tipText: String {
         "Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\n\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, escape it with a backslash: \\|\n\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple's ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year."
     }
@@ -132,6 +143,11 @@ private struct ChordEditorSheet: View {
                         outputTipsButton
                     }
                 }
+                if let outputValidationMessage {
+                    Text(outputValidationMessage)
+                        .font(.settingsHint)
+                        .foregroundColor(.red)
+                }
                 Picker("Capitalisation", selection: $capitalisationMode) {
                     ForEach(ChordCapitalisationMode.allCases) { mode in
                         Text(mode.displayName).tag(mode)
@@ -154,6 +170,7 @@ private struct ChordEditorSheet: View {
                 Button("Save", action: onSave)
                     .keyboardShortcut(.defaultAction)
                     .keyboardShortcut("s", modifiers: .command)
+                    .disabled(!canSave)
                     .confirmationDialog(
                         inputConflictTitle,
                         isPresented: $showInputConflictConfirmation,
@@ -462,6 +479,12 @@ struct SettingsView: View {
     }
 
     private func saveChordEditor() {
+        guard Chord.isValidOutput(chordFormOutput) else {
+            return
+        }
+        guard !Chord.normalisedInputKey(for: chordFormInput).isEmpty else {
+            return
+        }
         if let conflict = conflictingChord(for: chordFormInput, excludingId: chordEditorExcludingID) {
             conflictingChordForSave = conflict
             showChordInputConflictConfirmation = true
@@ -541,8 +564,27 @@ struct SettingsView: View {
         .environment(\.openURL, OpenURLAction(handler: handleSettingsViewLink))
     }
 
+    private var duplicateNormalisedInputsWarning: some View {
+        let keys = appModel.appSettings.duplicateNormalisedInputKeys.joined(separator: ", ")
+        return HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+            Text("Multiple chords share the same input combination (\(keys)). Only the last entry in your settings file is used for each.")
+                .font(.settingsHint)
+                .foregroundColor(.secondary)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
+        .cornerRadius(8)
+    }
+
     private var chordsPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !appModel.appSettings.duplicateNormalisedInputKeys.isEmpty {
+                duplicateNormalisedInputsWarning
+            }
+
             if showFilterInput {
                 HStack {
                     TextField("Filter chords...", text: $filterString)
@@ -820,13 +862,13 @@ struct SettingsView: View {
                             .buttonStyle(.link)
 
                             Button("Change…") {
-                                delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
+                                appModel.appSettings.chooseBackupSettingsFileLocation()
                             }
                         } else {
                             Text("Not set")
                                 .foregroundColor(.secondary)
                             Button("Choose…") {
-                                delegate.appModel.appSettings.chooseBackupSettingsFileLocation()
+                                appModel.appSettings.chooseBackupSettingsFileLocation()
                             }
                         }
                     }

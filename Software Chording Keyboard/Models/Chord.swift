@@ -142,6 +142,15 @@ class Chord: Identifiable, ObservableObject {
     var pipeNegativePosition = 0
     var hasPipe = false
 
+    /// True when raw output contains more than one unescaped cursor pipe.
+    var hasInvalidOutput: Bool {
+        Self.decomposedOutput(for: output).invalid
+    }
+
+    static func isValidOutput(_ rawOutput: String) -> Bool {
+        !decomposedOutput(for: rawOutput).invalid
+    }
+
     // Computed property for sorting
     var usageCountForSorting: Int {
         totalUsageCount
@@ -213,6 +222,9 @@ class Chord: Identifiable, ObservableObject {
         if decomposed.invalid {
             gDebugPrint("Error: Chord output has more than one pipe")
             deleteCount = input.count
+            outputChunks = []
+            pipeNegativePosition = 0
+            hasPipe = false
             return
         }
 
@@ -253,7 +265,7 @@ class Chord: Identifiable, ObservableObject {
 
         let decomposed = Self.decomposedOutput(for: output)
         if decomposed.invalid {
-            return (Self.capitalisedSegments(outputChunks, mode: effectiveCapitalisationMode), pipeNegativePosition)
+            return ([], 0)
         }
         let before = OutputPlaceholderExpansion.expand(decomposed.beforeCursor, referenceDate: referenceDate)
         let after = OutputPlaceholderExpansion.expand(decomposed.afterCursor, referenceDate: referenceDate)

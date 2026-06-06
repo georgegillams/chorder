@@ -35,6 +35,8 @@ class AppSettings: ObservableObject {
     /* Calculated */
     private(set) public var millisecondsToHold: Double
     private(set) public var alphabeticalInputOutputMappingDictionary: [String: Chord] = [:]
+    /// Normalised input keys that map to more than one chord in the settings file (last chord wins at runtime).
+    @Published private(set) public var duplicateNormalisedInputKeys: [String] = []
 
     /* Storage */
     var bookmarks: BookMarks
@@ -109,9 +111,22 @@ class AppSettings: ObservableObject {
 
     func recalculateAlphabeticalMapping() {
         alphabeticalInputOutputMappingDictionary = [:]
+        var duplicateKeys: [String] = []
+
         for chord in chords {
-            alphabeticalInputOutputMappingDictionary[chord.inputSorted] = chord
+            let key = chord.inputSorted
+            if let existing = alphabeticalInputOutputMappingDictionary[key] {
+                duplicateKeys.append(key)
+                gDebugPrint(
+                    "Warning: duplicate normalised chord input '\(key)' — "
+                    + "using '\(chord.input)' (id: \(chord.id)), "
+                    + "shadowing '\(existing.input)' (id: \(existing.id))"
+                )
+            }
+            alphabeticalInputOutputMappingDictionary[key] = chord
         }
+
+        duplicateNormalisedInputKeys = Array(Set(duplicateKeys)).sorted()
     }
 
     func deserialiseChords(serialisableChords: [SerialisableChord]) -> [Chord] {

@@ -292,4 +292,50 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(detection.joinedCharactersLowercased(), "")
     }
 
+    func testDecomposedOutputMarksMultipleUnescapedPipesInvalid() {
+        let result = Chord.decomposedOutput(for: "a|b|c")
+        XCTAssertTrue(result.invalid)
+    }
+
+    func testIsValidOutputAcceptsSinglePipeAndEscapedPipes() {
+        XCTAssertTrue(Chord.isValidOutput("hello"))
+        XCTAssertTrue(Chord.isValidOutput("hel|lo"))
+        XCTAssertTrue(Chord.isValidOutput("a\\|b|c"))
+    }
+
+    func testIsValidOutputRejectsMultipleUnescapedPipes() {
+        XCTAssertFalse(Chord.isValidOutput("a|b|c"))
+    }
+
+    func testInvalidOutputClearsDerivedState() {
+        let chord = Chord(input: "ab", output: "hello")
+        XCTAssertFalse(chord.outputChunks.isEmpty)
+
+        chord.update(
+            input: "ab",
+            output: "a|b|c",
+            capitalisationMode: .default,
+            spaceBeforeOutputMode: .default
+        )
+
+        XCTAssertTrue(chord.hasInvalidOutput)
+        XCTAssertTrue(chord.outputChunks.isEmpty)
+        XCTAssertFalse(chord.hasPipe)
+        XCTAssertEqual(chord.pipeNegativePosition, 0)
+    }
+
+    func testResolveTypingSegmentsReturnsEmptyForInvalidOutput() {
+        let chord = Chord(input: "ab", output: "hello")
+        chord.update(
+            input: "ab",
+            output: "x|y|z",
+            capitalisationMode: .default,
+            spaceBeforeOutputMode: .default
+        )
+
+        let (segments, leftArrowCount) = chord.resolveTypingSegments()
+        XCTAssertTrue(segments.isEmpty)
+        XCTAssertEqual(leftArrowCount, 0)
+    }
+
 }

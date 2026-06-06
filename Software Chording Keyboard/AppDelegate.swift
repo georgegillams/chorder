@@ -85,6 +85,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     private let syncedStorageReloadInterval: TimeInterval = 30 * 60
     private var syncedStorageReloadTimer: Timer?
     private var workspaceWakeObserver: NSObjectProtocol?
+    private var globalEventMonitors: [Any] = []
+    private var didShowGlobalMonitorFailureAlert = false
 
     /* Typing */
 
@@ -159,9 +161,13 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let character = event.characters
         gDebugPrint("eventKey \(eventKey) character \(character)")
 
-        // Ignore if any modifier keys are held
+        // Modifier shortcuts are not chord input; clear any in-progress detection.
         if(event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
            || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.function)) {
+            capitalisationMode = .off
+            chordDetection.reset()
+            owedSpace = false
+            autoInsertedSpaceBeforeCurrentInput = false
             return
         }
 
@@ -598,16 +604,47 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         checkInputAccess()
         createStatusBarButton()
-
-        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
-        NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler)
+        registerGlobalEventMonitors()
 
         if ProcessInfo.processInfo.arguments.contains("G_DEBUG") {
             showSettingsWindow()
         }
 
         startSyncedStorageReloadSchedule()
+    }
+
+    private func registerGlobalEventMonitors() {
+        let monitors: [Any?] = [
+            NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler),
+            NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler),
+            NSEvent.addGlobalMonitorForEvents(matching: .keyUp, handler: keyUpHandler),
+        ]
+        globalEventMonitors = monitors.compactMap { $0 }
+
+        if globalEventMonitors.count < monitors.count {
+            showGlobalMonitorRegistrationFailureAlert()
+        }
+    }
+
+    private func showGlobalMonitorRegistrationFailureAlert() {
+        guard !didShowGlobalMonitorFailureAlert else {
+            return
+        }
+        didShowGlobalMonitorFailureAlert = true
+
+        let alert = NSAlert()
+        alert.messageText = "Keyboard monitoring unavailable"
+        alert.informativeText = """
+            \(getTargetName()) could not register global keyboard monitors. \
+            Chord detection will not work until Input Monitoring permission is granted in System Settings.
+            """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open Input Monitoring Settings")
+        alert.addButton(withTitle: "OK")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            openInputMonitoringSettings()
+        }
     }
 
     private func startSyncedStorageReloadSchedule() {
