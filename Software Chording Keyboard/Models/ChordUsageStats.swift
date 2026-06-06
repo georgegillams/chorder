@@ -108,3 +108,64 @@ enum ChordUsageStore {
         machineId.replacingOccurrences(of: "/", with: "_")
     }
 }
+
+/// Aggregated usage metrics shown on the Stats tab.
+enum ChordUsageSummary {
+    /// Average time to type one character (~40 WPM, ~5 characters per word).
+    static let averageSecondsPerTypedCharacter = 0.25
+
+    struct Totals: Equatable {
+        let totalChordsEntered: Int
+        let totalCharactersSaved: Int
+        let estimatedTimeSavedSeconds: TimeInterval
+    }
+
+    static func charactersSavedPerUse(for chord: Chord, referenceDate: Date = Date()) -> Int {
+        let outputLength = ChordPracticeSelection.displayOutput(for: chord, referenceDate: referenceDate).count
+        return outputLength - chord.input.count
+    }
+
+    static func totals(for chords: [Chord], referenceDate: Date = Date()) -> Totals {
+        var totalChordsEntered = 0
+        var totalCharactersSaved = 0
+
+        for chord in chords {
+            let uses = chord.totalUsageCount
+            guard uses > 0 else { continue }
+            totalChordsEntered += uses
+            totalCharactersSaved += charactersSavedPerUse(for: chord, referenceDate: referenceDate) * uses
+        }
+
+        let estimatedTimeSavedSeconds =
+            TimeInterval(totalCharactersSaved) * averageSecondsPerTypedCharacter
+
+        return Totals(
+            totalChordsEntered: totalChordsEntered,
+            totalCharactersSaved: totalCharactersSaved,
+            estimatedTimeSavedSeconds: estimatedTimeSavedSeconds
+        )
+    }
+
+    static func formattedTimeSaved(_ seconds: TimeInterval) -> String {
+        let totalSeconds = max(0, Int(seconds.rounded()))
+        if totalSeconds < 60 {
+            return "\(totalSeconds) second\(totalSeconds == 1 ? "" : "s")"
+        }
+
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let remainingSeconds = totalSeconds % 60
+
+        if hours > 0 {
+            if minutes > 0 {
+                return "\(hours) hour\(hours == 1 ? "" : "s") \(minutes) minute\(minutes == 1 ? "" : "s")"
+            }
+            return "\(hours) hour\(hours == 1 ? "" : "s")"
+        }
+
+        if remainingSeconds > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") \(remainingSeconds) second\(remainingSeconds == 1 ? "" : "s")"
+        }
+        return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+    }
+}

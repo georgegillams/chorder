@@ -27,6 +27,7 @@ protocol SettingsActions {
 private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
     case chords
     case practice
+    case stats
     case help
     case settings
 
@@ -38,6 +39,8 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
             return "Chords"
         case .practice:
             return "Practice"
+        case .stats:
+            return "Stats"
         case .help:
             return "Help"
         case .settings:
@@ -51,6 +54,8 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
             return "list.bullet.rectangle"
         case .practice:
             return "repeat.circle"
+        case .stats:
+            return "chart.bar"
         case .help:
             return "questionmark.circle"
         case .settings:
@@ -729,6 +734,8 @@ struct SettingsView: View {
                         appModel: appModel,
                         isActive: chordEditorContext == nil
                     )
+                case .stats:
+                    StatsView(appModel: appModel)
                 case .help:
                     helpPanel
                 case .settings:
@@ -740,7 +747,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                         Text("Select a section")
                             .font(.headline)
-                        Text("Choose Chords, Practice, Help, or Settings from the sidebar.")
+                        Text("Choose Chords, Practice, Stats, Help, or Settings from the sidebar.")
                             .font(.settingsSecondary)
                             .foregroundColor(.secondary)
                     }

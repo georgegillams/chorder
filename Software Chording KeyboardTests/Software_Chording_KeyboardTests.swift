@@ -865,6 +865,29 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(display, "on 1970day")
     }
 
+    func testChordUsageSummaryTotalsAggregateAcrossChordsAndMachines() {
+        let referenceDate = Date(timeIntervalSince1970: 0)
+        let chords = [
+            Chord(input: "th", output: "the", usageByMachine: ["machine-a": 10, "machine-b": 5]),
+            Chord(input: "ab", output: "alpha", usageByMachine: ["machine-a": 2]),
+            Chord(input: "xy", output: "x", usageByMachine: ["machine-a": 4]),
+        ]
+
+        let totals = ChordUsageSummary.totals(for: chords, referenceDate: referenceDate)
+
+        XCTAssertEqual(totals.totalChordsEntered, 21)
+        XCTAssertEqual(totals.totalCharactersSaved, 17)
+        XCTAssertEqual(totals.estimatedTimeSavedSeconds, 4.25, accuracy: 0.001)
+    }
+
+    func testChordUsageSummaryFormattedTimeSaved() {
+        XCTAssertEqual(ChordUsageSummary.formattedTimeSaved(0), "0 seconds")
+        XCTAssertEqual(ChordUsageSummary.formattedTimeSaved(45), "45 seconds")
+        XCTAssertEqual(ChordUsageSummary.formattedTimeSaved(90), "1 minute 30 seconds")
+        XCTAssertEqual(ChordUsageSummary.formattedTimeSaved(3600), "1 hour")
+        XCTAssertEqual(ChordUsageSummary.formattedTimeSaved(5400), "1 hour 30 minutes")
+    }
+
     func testPracticeChordMonitorDetectsTargetChordHold() {
         let chord = Chord(input: "th", output: "the")
         let monitor = PracticeChordMonitor()

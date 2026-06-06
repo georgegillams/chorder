@@ -34,6 +34,7 @@
 		PRCA00012DA6B2D200B360B1 /* ChordPracticeSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */; };
 		PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00042DA6B2D200B360B1 /* PracticeView.swift */; };
 		PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */; };
+		STCA00032DA6B2D200B360B1 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STCA00042DA6B2D200B360B1 /* StatsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,6 +86,7 @@
 		PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPracticeSelection.swift; sourceTree = "<group>"; };
 		PRCA00042DA6B2D200B360B1 /* PracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeView.swift; sourceTree = "<group>"; };
 		PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeChordMonitor.swift; sourceTree = "<group>"; };
+		STCA00042DA6B2D200B360B1 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		TPLN000229DE19F90081AB4E /* AllTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllTests.xctestplan; sourceTree = "<group>"; };
 		TPLN000129DE19F90081AB4E /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -221,6 +223,7 @@
 			children = (
 				08E19F2329DE1CAD0081AB4E /* Settings.swift */,
 				PRCA00042DA6B2D200B360B1 /* PracticeView.swift */,
+				STCA00042DA6B2D200B360B1 /* StatsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -391,6 +394,7 @@
 				PRCA00012DA6B2D200B360B1 /* ChordPracticeSelection.swift in Sources */,
 				PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */,
 				PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */,
+				STCA00032DA6B2D200B360B1 /* StatsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
