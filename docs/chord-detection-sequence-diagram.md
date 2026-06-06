@@ -23,7 +23,7 @@ flowchart LR
     User --> Monitor["NSEvent global monitors"]
     Monitor --> AppDelegate["AppDelegate keyDown/keyUp handlers"]
     AppDelegate --> Detection["ChordDetectionState"]
-    Detection -->|"onChordMatched"| Match["handleChordMatch"]
+    Detection -->|"onChordMatched"| Match["KeyboardInputEngine.handleChordMatch"]
     Match --> Replace["replaceCharacters (AX or CGEvent)"]
     Replace --> TargetApp
 ```
@@ -31,7 +31,7 @@ flowchart LR
 - **Global keyboard monitors only** — every keyDown/keyUp reaches the target app immediately; handlers do not suppress input.
 - Characters come from `NSEvent.characters` in `keyDownHandler`.
 - Modifier keys (cmd/option/control/fn), backspace, space, tab, return, escape, and left/right arrow **reset** chord detection and clear held keys.
-- During replacement, `ChordDetectionState` is in phase `.replacing` and ignores further keyDown/keyUp until `finishReplacement()`.
+- During replacement, `ChordDetectionState` is in phase `.replacing` and ignores further keyDown/keyUp until replacement completes (immediately on AX success, or when the last synthetic echo is consumed on the CGEvent path).
 
 ### Chord registry (lookup dictionary)
 
@@ -55,14 +55,14 @@ The registry is **not** rebuilt on hold evaluation or on match. At launch, `AppD
    - phase is still `.holdPending`
    - current held characters equal the snapshot (set unchanged for full hold duration)
    - `isRegisteredChord(normalisedKey)` is true
-5. On match → `onChordMatched` → `handleChordMatch` → `beginReplacement()` → `replaceCharacters` → `finishReplacement()`.
+5. On match → `onChordMatched` → `handleChordMatch` → `beginReplacement()` → `replaceCharacters` → `endReplacementIfNoPendingEchoes()` (CGEvent path finishes replacement when synthetic echoes are consumed).
 
 **No prefix trie or deferral.** If the held set is registered when the timer fires, the chord commits **on the timer** while keys may still be held — even when a longer chord (e.g. `thi`) is also configured.
 
 ### Replacement
 
-- **Primary:** Accessibility API (`replaceCharactersViaAX`) when `useAccessibilityAPI` is enabled and the focused field supports text writes.
-- **Fallback:** CGEvent synthetic backspace + type (`pressKey` / `typeText`), with `ignoreKeyPresses` so the app’s own events are not re-processed.
+- **Primary:** Accessibility API (`replaceViaAccessibility`) when `useAccessibilityAPI` is enabled and the focused field supports text writes. No synthetic echoes; `endReplacementIfNoPendingEchoes()` completes replacement immediately.
+- **Fallback:** CGEvent synthetic backspace + type (`replaceViaSyntheticKeys`). The replacer posts CGEvents synchronously and returns an echo count; `scheduleEchoes(count)` runs on return, before the run loop delivers those events to the monitor. Each synthetic callback is dropped via `consumeEchoIfPending()`; `finishReplacement()` runs when the last echo is consumed.
 - After a successful match, capitalisation mode is turned off and usage stats are incremented.
 
 ### Implications for overlapping chords
@@ -165,8 +165,9 @@ sequenceDiagram
     participant TargetApp as TargetApp
     participant Monitor as GlobalMonitor
     participant Detection as ChordDetectionState
-    participant App as AppDelegate
+    participant App as KeyboardInputEngine
     participant Registry as alphabeticalInputOutputMappingDictionary
+    participant Replacer as TextReplacer
 
     User->>TargetApp: t keyDown
     Monitor->>Detection: keyDown(t)
@@ -192,9 +193,23 @@ sequenceDiagram
     App->>Registry: lookup "hit" → thi chord
     App->>App: handleChordMatch("hit")
     App->>Detection: beginReplacement() → phase=replacing
-    App->>TargetApp: replaceCharacters(thi→this)
-    Note over TargetApp: AX or backspace "thi", type "this"<br/>field = "this"
-    App->>Detection: finishReplacement() → idle
+
+    alt Accessibility API succeeds
+        App->>TargetApp: replaceViaAccessibility(thi→this)
+        Note over TargetApp: field = "this"
+        App->>Detection: endReplacementIfNoPendingEchoes() → idle
+    else CGEvent fallback
+        App->>Replacer: replaceViaSyntheticKeys(thi→this)
+        Replacer->>TargetApp: sentinel + backspaces + type "this"
+        Replacer-->>App: return N
+        App->>Detection: scheduleEchoes(N)
+        App->>Detection: endReplacementIfNoPendingEchoes()
+        Note over Detection: phase=.replacing until echoes consumed
+        Monitor->>App: handleKeyDown/keyUp ×N (synthetic)
+        App->>Detection: consumeEchoIfPending() ×N
+        Note over Detection: last echo → finishReplacement() → idle
+        Note over TargetApp: field = "this"
+    end
 
     User->>TargetApp: release t, i, h
     Monitor->>Detection: keyUp(t), keyUp(i), keyUp(h)
@@ -213,8 +228,9 @@ sequenceDiagram
     participant TargetApp as TargetApp
     participant Monitor as GlobalMonitor
     participant Detection as ChordDetectionState
-    participant App as AppDelegate
+    participant App as KeyboardInputEngine
     participant Registry as alphabeticalInputOutputMappingDictionary
+    participant Replacer as TextReplacer
 
     User->>TargetApp: t keyDown
     Monitor->>Detection: keyDown(t)
@@ -235,9 +251,23 @@ sequenceDiagram
     App->>Registry: lookup "ht" → th chord
     App->>App: handleChordMatch("ht")
     App->>Detection: beginReplacement() → phase=replacing
-    App->>TargetApp: replaceCharacters(th→the)
-    Note over TargetApp: AX or backspace "th", type "the"<br/>field = "the"
-    App->>Detection: finishReplacement() → idle
+
+    alt Accessibility API succeeds
+        App->>TargetApp: replaceViaAccessibility(th→the)
+        Note over TargetApp: field = "the"
+        App->>Detection: endReplacementIfNoPendingEchoes() → idle
+    else CGEvent fallback
+        App->>Replacer: replaceViaSyntheticKeys(th→the)
+        Replacer->>TargetApp: sentinel + backspaces + type "the"
+        Replacer-->>App: return N
+        App->>Detection: scheduleEchoes(N)
+        App->>Detection: endReplacementIfNoPendingEchoes()
+        Note over Detection: phase=.replacing until echoes consumed
+        Monitor->>App: handleKeyDown/keyUp ×N (synthetic)
+        App->>Detection: consumeEchoIfPending() ×N
+        Note over Detection: last echo → finishReplacement() → idle
+        Note over TargetApp: field = "the"
+    end
 
     User->>TargetApp: release t, h
     Monitor->>Detection: keyUp(t), keyUp(h)
@@ -257,7 +287,9 @@ sequenceDiagram
 
 ## Files to read alongside these diagrams
 
-- [`ChordDetectionState.swift`](../Software%20Chording%20Keyboard/Models/ChordDetectionState.swift) — phases, hold timer, `isRegisteredChord` callback
+- [`ChordDetectionState.swift`](../Software%20Chording%20Keyboard/Models/ChordDetectionState.swift) — phases, hold timer, `scheduleEchoes`, `consumeEchoIfPending`
+- [`KeyboardInputEngine.swift`](../Software%20Chording%20Keyboard/Services/KeyboardInputEngine.swift) — `handleChordMatch`, `replaceCharacters`
+- [`TextReplacer.swift`](../Software%20Chording%20Keyboard/Services/TextReplacer.swift) — `replaceViaSyntheticKeys`, `replaceViaAccessibility`
 - [`AppSettings.swift`](../Software%20Chording%20Keyboard/Models/AppSettings.swift) — `recalculateAlphabeticalMapping`, `alphabeticalInputOutputMappingDictionary`
-- [`AppDelegate.swift`](../Software%20Chording%20Keyboard/AppDelegate.swift) — monitor handlers, `handleChordMatch`, `replaceCharacters`
+- [`AppDelegate.swift`](../Software%20Chording%20Keyboard/AppDelegate.swift) — global monitor registration
 - [`Software_Chording_KeyboardTests.swift`](../Software%20Chording%20KeyboardTests/Software_Chording_KeyboardTests.swift) — `testChordDetectionFiresAfterHoldWhenStable`, `testChordDetectionFiresShorterChordImmediatelyWhenLongerAlsoConfigured`, `testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes`
