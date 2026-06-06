@@ -667,17 +667,29 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     }
 
     @objc func statusBarButtonPress(_ sender: AnyObject?) {
+        if NSApp.currentEvent?.modifierFlags.contains(.option) == true {
+            showSettingsWindowWithNewChord()
+            return
+        }
         openMenu()
     }
 
     private let settingsWindowDefaultSize = NSSize(width: 1200, height: 720)
     private let settingsWindowMinimumSize = NSSize(width: 920, height: 450)
 
-    @objc func showSettingsWindow () {
+    @objc func showSettingsWindow() {
+        presentSettingsWindow(openCreateChord: false)
+    }
+
+    @objc func showSettingsWindowWithNewChord() {
+        presentSettingsWindow(openCreateChord: true)
+    }
+
+    private func presentSettingsWindow(openCreateChord: Bool) {
         windowsOpen += 1
         updateActivationPolicy()
 
-        settingsUI = SettingsView(appModel: appModel)
+        settingsUI = SettingsView(appModel: appModel, openCreateChordOnAppear: openCreateChord)
 
         if settingsWindow == nil {
             settingsWindow = NSWindow(
@@ -710,6 +722,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         window.center()
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc func openMenu() {
@@ -718,6 +731,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let menu = NSMenu()
         //        menu.addItem(withTitle: "About \(getTargetName())", action: #selector(openAbout), keyEquivalent: "")
         menu.addItem(withTitle: "Preferences", action: #selector(showSettingsWindow), keyEquivalent: "")
+        menu.addItem(withTitle: "Add Chord…", action: #selector(showSettingsWindowWithNewChord), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Send me feedback", action: #selector(openFeedback), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())

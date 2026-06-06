@@ -16,6 +16,7 @@ private extension Font {
 
 private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
     case chords
+    case help
     case settings
 
     var id: String { rawValue }
@@ -24,6 +25,8 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
         switch self {
         case .chords:
             return "Chords"
+        case .help:
+            return "Help"
         case .settings:
             return "Settings"
         }
@@ -33,6 +36,8 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
         switch self {
         case .chords:
             return "list.bullet.rectangle"
+        case .help:
+            return "questionmark.circle"
         case .settings:
             return "gearshape"
         }
@@ -139,6 +144,7 @@ private struct ChordEditorSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .defaultFocus($focusedField, .input)
             .padding(.horizontal, -20)
 
             HStack {
@@ -163,7 +169,9 @@ private struct ChordEditorSheet: View {
         .frame(minWidth: 420, maxWidth: .infinity, alignment: .leading)
         .accessibilityAddTraits(.isModal)
         .onAppear {
-            focusedField = .input
+            DispatchQueue.main.async {
+                focusedField = .input
+            }
         }
         .onExitCommand {
             onCancel()
@@ -212,9 +220,11 @@ struct SettingsView: View {
     @State private var showDeleteChordsConfirmation = false
     @State private var showChordInputConflictConfirmation = false
     @State private var conflictingChordForSave: Chord?
+    private let openCreateChordOnAppear: Bool
 
-    init(appModel: AppModel) {
+    init(appModel: AppModel, openCreateChordOnAppear: Bool = false) {
         self.appModel = appModel
+        self.openCreateChordOnAppear = openCreateChordOnAppear
     }
 
     // Computed property to check if custom sorting is active
@@ -314,6 +324,47 @@ struct SettingsView: View {
         NSWorkspace.shared.selectFile(settingsFilePath, inFileViewerRootedAtPath: directory.path)
     }
 
+    private static let settingsTabURL = URL(string: "chording-keyboard://settings-tab")!
+    private static let configFileURL = URL(string: "chording-keyboard://config-file")!
+
+    private func handleSettingsViewLink(_ url: URL) -> OpenURLAction.Result {
+        if url == Self.settingsTabURL {
+            selectedSidebarItem = .settings
+            return .handled
+        }
+        if url == Self.configFileURL {
+            revealSettingsFileInFinder()
+            return .handled
+        }
+        return .systemAction
+    }
+
+    private func linkOccurrences(in attributed: inout AttributedString, phrase: String, url: URL) {
+        var searchStart = attributed.startIndex
+        while searchStart < attributed.endIndex,
+              let range = attributed[searchStart...].range(of: phrase) {
+            attributed[range].link = url
+            attributed[range].foregroundColor = .accentColor
+            attributed[range].underlineStyle = .single
+            searchStart = range.upperBound
+        }
+    }
+
+    private func attributedHint(_ plain: String, linkSettingsTab: Bool = false, linkConfigFile: Bool = false) -> AttributedString {
+        var attributed = AttributedString(plain)
+        if linkSettingsTab {
+            if attributed.range(of: "Settings tab") != nil {
+                linkOccurrences(in: &attributed, phrase: "Settings tab", url: Self.settingsTabURL)
+            } else {
+                linkOccurrences(in: &attributed, phrase: "Settings", url: Self.settingsTabURL)
+            }
+        }
+        if linkConfigFile {
+            linkOccurrences(in: &attributed, phrase: "config file", url: Self.configFileURL)
+        }
+        return attributed
+    }
+
     private func backupLocationDisplayName(for directory: URL) -> String {
         let path = directory.path
         if path.contains("com~apple~CloudDocs") {
@@ -326,27 +377,17 @@ struct SettingsView: View {
         return "~/…/\(directory.lastPathComponent)"
     }
 
-    private func attributedConfigFileEditTip(plain: String, backupLocation: URL) -> AttributedString {
-        var attributed = AttributedString(plain)
-        if let range = attributed.range(of: "your config") {
-            attributed[range].link = backupLocation
-            attributed[range].foregroundColor = .accentColor
-            attributed[range].underlineStyle = .single
-        }
-        return attributed
+    private func attributedConfigFileEditTip(plain: String) -> AttributedString {
+        attributedHint(plain, linkConfigFile: true)
     }
 
     @ViewBuilder
     private var configFileEditTip: some View {
-        let plain = "💡 Tip: If you want to make lots of changes, you can edit your config file directly then reload the app. Just be careful! It's worth creating a backup of your config file first!"
-        if let backupLocation = appModel.appSettings.settingsFileDirectory {
-            Text(attributedConfigFileEditTip(plain: plain, backupLocation: backupLocation))
+        let plain = "💡 Tip: If you want to make lots of changes, you can edit your config file directly then restart the app. Just be careful! It's worth creating a backup of your config file first!"
+        if appModel.appSettings.settingsFileDirectory != nil {
+            Text(attributedConfigFileEditTip(plain: plain))
                 .font(.settingsSecondary)
                 .foregroundColor(.secondary)
-                .environment(\.openURL, OpenURLAction { _ in
-                    revealSettingsFileInFinder()
-                    return .handled
-                })
         } else {
             Text(plain)
                 .font(.settingsSecondary)
@@ -448,6 +489,8 @@ struct SettingsView: View {
                 switch selectedSidebarItem {
                 case .chords:
                     chordsPanel
+                case .help:
+                    helpPanel
                 case .settings:
                     generalSettingsPanel
                 case .none:
@@ -457,7 +500,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                         Text("Select a section")
                             .font(.headline)
-                        Text("Choose Chords or Settings from the sidebar.")
+                        Text("Choose Chords, Help, or Settings from the sidebar.")
                             .font(.settingsSecondary)
                             .foregroundColor(.secondary)
                     }
@@ -488,6 +531,14 @@ struct SettingsView: View {
                 onCancel: dismissChordEditor
             )
         }
+        .onAppear {
+            if openCreateChordOnAppear {
+                DispatchQueue.main.async {
+                    openCreateChordEditor()
+                }
+            }
+        }
+        .environment(\.openURL, OpenURLAction(handler: handleSettingsViewLink))
     }
 
     private var chordsPanel: some View {
@@ -643,6 +694,10 @@ struct SettingsView: View {
     }
 
     private func settingsRowLabel(title: String, hint: String) -> some View {
+        settingsRowLabel(title: title, hint: AttributedString(hint))
+    }
+
+    private func settingsRowLabel(title: String, hint: AttributedString) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
             Text(hint)
@@ -650,6 +705,75 @@ struct SettingsView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var helpPanel: some View {
+        Form {
+            Section {
+                settingsRowLabel(
+                    title: "Quickly add a chord",
+                    hint: "Option-click the menu bar icon to open the new-chord dialog in one step, without opening the menu first."
+                )
+            } header: {
+                Text("Shortcuts")
+            }
+
+            Section {
+                settingsRowLabel(
+                    title: "Chords don't work in this window",
+                    hint: "Typing chords inside this preferences window is not supported. Chords only work in other apps while \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") is running in the background."
+                )
+                settingsRowLabel(
+                    title: "Hold keys together",
+                    hint: attributedHint(
+                        "Press and hold the keys in a chord for the hold delay (see Settings), then release. If you release too quickly, the chord won't trigger.",
+                        linkSettingsTab: true
+                    )
+                )
+                settingsRowLabel(
+                    title: "Capitalisation mode",
+                    hint: "Tap Shift (press and release without typing anything else) to cycle through off, first-letter capitalised, and full capitalisation. The menu bar icon shows the current mode."
+                )
+            } header: {
+                Text("Using the app")
+            }
+
+            Section {
+                settingsRowLabel(
+                    title: "Cursor placement",
+                    hint: "Put a | (pipe) in a chord's output to place the cursor there after replacement. Escape a literal pipe with \\|."
+                )
+                settingsRowLabel(
+                    title: "Date placeholders",
+                    hint: "Use {{date}} tokens in output, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}."
+                )
+                settingsRowLabel(
+                    title: "Bulk editing",
+                    hint: appModel.appSettings.settingsFileDirectory != nil
+                        ? attributedHint(
+                            "For large changes, you can edit the config file directly and restart the app.",
+                            linkConfigFile: true
+                        )
+                        : AttributedString("For large changes, you can edit the config file directly and restart the app. Back up your config file first.")
+                )
+            } header: {
+                Text("Chord output tips")
+            }
+
+            Section {
+                settingsRowLabel(
+                    title: "Permissions",
+                    hint: attributedHint(
+                        "The app needs Input Monitoring and Accessibility permissions to detect chords and type for you. Grant these in the Settings tab if prompted.",
+                        linkSettingsTab: true
+                    )
+                )
+            } header: {
+                Text("Setup")
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Help")
     }
 
     private var generalSettingsPanel: some View {
