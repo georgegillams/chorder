@@ -36,6 +36,9 @@ struct MachineUsageStats: Codable, Equatable {
         if !usageByChordId.isEmpty {
             try container.encode(usageByChordId, forKey: .usageByChordId)
         }
+        if !legacyUsageByInput.isEmpty {
+            try container.encode(legacyUsageByInput, forKey: .usageByInput)
+        }
     }
 }
 

@@ -65,7 +65,26 @@ class AppSettings: ObservableObject {
         }
     }
 
-    init() {
+    private static var isRunningUnitTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    static func makeForTesting() -> AppSettings {
+        AppSettings(settingsFileDirectoryOverride: isolatedUnitTestSettingsDirectory(uniquePerInstance: true))
+    }
+
+    static func isolatedUnitTestSettingsDirectory(uniquePerInstance: Bool) -> URL {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("software-chording-keyboard-unit-tests", isDirectory: true)
+        let directoryName = uniquePerInstance
+            ? UUID().uuidString
+            : String(ProcessInfo.processInfo.processIdentifier)
+        let root = base.appendingPathComponent(directoryName, isDirectory: true)
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
+    init(settingsFileDirectoryOverride: URL? = nil) {
         // default values - overwritten by readAppSettingsFromFile() below
         chords = []
         millisecondsToHoldStr = "100ms"
@@ -73,12 +92,23 @@ class AppSettings: ObservableObject {
         useAccessibilityAPI = true
         // end of default values
 
-        settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
-        gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
         machineIdentifier = MachineIdentifier.current
         gDebugPrint("Machine identifier: \(machineIdentifier)")
-        bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
-        reconcileSettingsDirectoryWithBookmarks()
+
+        if let settingsFileDirectoryOverride {
+            settingsFileDirectory = settingsFileDirectoryOverride
+            bookmarks = BookMarks(data: [:])
+        } else if Self.isRunningUnitTests {
+            settingsFileDirectory = Self.isolatedUnitTestSettingsDirectory(uniquePerInstance: false)
+            bookmarks = BookMarks(data: [:])
+            gDebugPrint("Using isolated unit-test settings directory: \(settingsFileDirectory!)")
+        } else {
+            settingsFileDirectory = UserDefaults.standard.url(forKey: "settingsFileDirectory")
+            gDebugPrint("User defaults settingsFileDirectory: \(settingsFileDirectory)")
+            bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
+            reconcileSettingsDirectoryWithBookmarks()
+        }
+
         readAppSettingsFromFile()
         initialisationComplete = true
     }
@@ -462,6 +492,10 @@ enum SettingsAlerts {
     }
 
     private static func present(title: String, message: String, style: NSAlert.Style) {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            gDebugPrint("Settings alert suppressed during tests: \(title) — \(message)")
+            return
+        }
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = title

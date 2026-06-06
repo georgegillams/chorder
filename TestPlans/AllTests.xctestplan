@@ -1,0 +1,31 @@
+{
+  "configurations" : [
+    {
+      "id" : "B2C3D4E5-F6A7-8901-BCDE-F12345678901",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Software Chording Keyboard.xcodeproj",
+        "identifier" : "08E19EFE29DE19F90081AB4E",
+        "name" : "Software Chording KeyboardTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Software Chording Keyboard.xcodeproj",
+        "identifier" : "08E19F0829DE19F90081AB4E",
+        "name" : "Software Chording KeyboardUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
