@@ -9,9 +9,19 @@ import AppKit
 import SwiftUI
 import LaunchAtLogin
 
-private extension Font {
+extension Font {
     static let settingsSecondary = Font.callout
     static let settingsHint = Font.footnote
+}
+
+/// Permission and system actions required by the settings UI.
+protocol SettingsActions {
+    func hasInputMonitoringPermission() -> Bool
+    func requestInputMonitoringPermission()
+    func openInputMonitoringSettings()
+    func hasAccessibilityPermission() -> Bool
+    func requestAccessibilityPermission()
+    func openAccessibilitySettings()
 }
 
 private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
@@ -89,11 +99,27 @@ private struct ChordEditorSheet: View {
     }
 
     private var canSave: Bool {
-        !Chord.normalisedInputKey(for: input).isEmpty && Chord.isValidOutput(output)
+        input.count >= 2
+            && !output.isEmpty
+            && Chord.isValidOutput(output)
+            && !Chord.hasDuplicateInputLetters(input)
+    }
+
+    private var inputValidationMessage: String? {
+        if Chord.hasDuplicateInputLetters(input) {
+            return "Each letter in the input must be a different key (duplicate letters cannot be held together)."
+        }
+        guard !input.isEmpty, input.count < 2 else {
+            return nil
+        }
+        return "Input must be at least 2 characters (chords use simultaneous key holds)."
     }
 
     private var outputValidationMessage: String? {
-        guard !output.isEmpty, !Chord.isValidOutput(output) else {
+        if output.isEmpty {
+            return nil
+        }
+        guard !Chord.isValidOutput(output) else {
             return nil
         }
         return "Output can contain at most one | (pipe) for cursor placement. Escape extra pipes with \\|."
@@ -134,6 +160,11 @@ private struct ChordEditorSheet: View {
             Form {
                 TextField("Chord input", text: $input)
                     .focused($focusedField, equals: .input)
+                if let inputValidationMessage {
+                    Text(inputValidationMessage)
+                        .font(.settingsHint)
+                        .foregroundColor(.red)
+                }
                 LabeledContent {
                     TextField("", text: $output)
                         .focused($focusedField, equals: .output)
@@ -218,8 +249,135 @@ private struct ChordOptionsCell: View {
     }
 }
 
+/// Observes double-clicks on the underlying `NSTableView` without intercepting single clicks.
+private struct TableDoubleClickHandler: NSViewRepresentable {
+    let onDoubleClick: (Int) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDoubleClick: onDoubleClick)
+    }
+
+    func makeNSView(context: Context) -> InstallerView {
+        let view = InstallerView()
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateNSView(_ nsView: InstallerView, context: Context) {
+        context.coordinator.onDoubleClick = onDoubleClick
+        nsView.coordinator = context.coordinator
+        nsView.installIfNeeded()
+    }
+
+    static func dismantleNSView(_ nsView: InstallerView, coordinator: Coordinator) {
+        coordinator.stopMonitoring()
+    }
+
+    final class Coordinator {
+        var onDoubleClick: (Int) -> Void
+        private var monitor: Any?
+        private weak var tableView: NSTableView?
+
+        init(onDoubleClick: @escaping (Int) -> Void) {
+            self.onDoubleClick = onDoubleClick
+        }
+
+        func startMonitoring(tableView: NSTableView) {
+            guard self.tableView !== tableView else {
+                return
+            }
+            stopMonitoring()
+            self.tableView = tableView
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                guard let self, let tableView = self.tableView else {
+                    return event
+                }
+                guard event.clickCount == 2, event.window === tableView.window else {
+                    return event
+                }
+                let point = tableView.convert(event.locationInWindow, from: nil)
+                guard tableView.bounds.contains(point) else {
+                    return event
+                }
+                let row = tableView.row(at: point)
+                guard row >= 0 else {
+                    return event
+                }
+                self.onDoubleClick(row)
+                return event
+            }
+        }
+
+        func stopMonitoring() {
+            if let monitor {
+                NSEvent.removeMonitor(monitor)
+                self.monitor = nil
+            }
+            tableView = nil
+        }
+
+        deinit {
+            stopMonitoring()
+        }
+    }
+
+    final class InstallerView: NSView {
+        weak var coordinator: Coordinator?
+        private weak var installedTableView: NSTableView?
+        private var installAttempts = 0
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            installIfNeeded()
+        }
+
+        func installIfNeeded() {
+            guard installedTableView == nil, let coordinator else {
+                return
+            }
+            guard installAttempts < 20 else {
+                return
+            }
+            installAttempts += 1
+
+            guard let tableView = findTableView() else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.installIfNeeded()
+                }
+                return
+            }
+
+            installedTableView = tableView
+            coordinator.startMonitoring(tableView: tableView)
+        }
+
+        private func findTableView() -> NSTableView? {
+            var current: NSView? = self
+            while let view = current {
+                if let tableView = searchForTableView(in: view) {
+                    return tableView
+                }
+                current = view.superview
+            }
+            return nil
+        }
+
+        private func searchForTableView(in view: NSView) -> NSTableView? {
+            if let tableView = view as? NSTableView {
+                return tableView
+            }
+            for subview in view.subviews {
+                if let tableView = searchForTableView(in: subview) {
+                    return tableView
+                }
+            }
+            return nil
+        }
+    }
+}
+
 struct SettingsView: View {
-    var delegate: AppDelegate = NSApp.delegate as! AppDelegate
+    let settingsActions: SettingsActions
     @ObservedObject var appModel: AppModel
     @State private var selectedChords = Set<Chord.ID>()
     @State private var chordEditorContext: ChordEditorContext?
@@ -239,9 +397,24 @@ struct SettingsView: View {
     @State private var conflictingChordForSave: Chord?
     private let openCreateChordOnAppear: Bool
 
-    init(appModel: AppModel, openCreateChordOnAppear: Bool = false) {
+    init(appModel: AppModel, settingsActions: SettingsActions, openCreateChordOnAppear: Bool = false) {
         self.appModel = appModel
+        self.settingsActions = settingsActions
         self.openCreateChordOnAppear = openCreateChordOnAppear
+    }
+
+    private var millisecondsToHoldStrBinding: Binding<String> {
+        Binding(
+            get: { appModel.appSettings.millisecondsToHoldStr },
+            set: { appModel.appSettings.millisecondsToHoldStr = $0 }
+        )
+    }
+
+    private var useAccessibilityAPIBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.appSettings.useAccessibilityAPI },
+            set: { appModel.appSettings.useAccessibilityAPI = $0 }
+        )
     }
 
     // Computed property to check if custom sorting is active
@@ -479,10 +652,10 @@ struct SettingsView: View {
     }
 
     private func saveChordEditor() {
-        guard Chord.isValidOutput(chordFormOutput) else {
-            return
-        }
-        guard !Chord.normalisedInputKey(for: chordFormInput).isEmpty else {
+        guard chordFormInput.count >= 2,
+              !chordFormOutput.isEmpty,
+              Chord.isValidOutput(chordFormOutput),
+              !Chord.hasDuplicateInputLetters(chordFormInput) else {
             return
         }
         if let conflict = conflictingChord(for: chordFormInput, excludingId: chordEditorExcludingID) {
@@ -495,6 +668,12 @@ struct SettingsView: View {
 
     private func replaceConflictingChord() {
         guard let conflict = conflictingChordForSave else {
+            return
+        }
+        guard chordFormInput.count >= 2,
+              !chordFormOutput.isEmpty,
+              Chord.isValidOutput(chordFormOutput),
+              !Chord.hasDuplicateInputLetters(chordFormInput) else {
             return
         }
         commitChordEditor(replacingExistingId: conflict.id)
@@ -656,6 +835,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderless)
                     .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                    .accessibilityLabel("Add chord")
                     Button(action: {
                         showDeleteChordsConfirmation = true
                     }) {
@@ -663,6 +843,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderless)
                     .frame(minWidth: 20, maxWidth: 20, minHeight: 20, maxHeight: 20)
+                    .accessibilityLabel("Delete selected chords")
                     .disabled(selectedChords.isEmpty)
                     .confirmationDialog(
                         deleteChordsConfirmationTitle,
@@ -768,7 +949,7 @@ struct SettingsView: View {
                 settingsRowLabel(
                     title: "Hold keys together",
                     hint: attributedHint(
-                        "Press and hold the keys in a chord for the hold delay (see Settings), then release. If you release too quickly, the chord won't trigger.",
+                        "Press and hold the keys in a chord for the hold delay (see Settings), then release. If you release too quickly, the chord won't trigger. When a shorter chord shares keys with a longer one (eg th and thi), the shorter chord fires if you hold long enough before adding the extra key.",
                         linkSettingsTab: true
                     )
                 )
@@ -818,21 +999,34 @@ struct SettingsView: View {
         .navigationTitle("Help")
     }
 
+    private var holdDelayValidationMessage: String? {
+        guard !appModel.appSettings.millisecondsToHoldStr.isEmpty,
+              AppSettings.parseHoldDelayMilliseconds(from: appModel.appSettings.millisecondsToHoldStr) == nil else {
+            return nil
+        }
+        return "Enter a value between \(Int(AppSettings.minimumHoldMilliseconds)) and \(Int(AppSettings.maximumHoldMilliseconds)) milliseconds."
+    }
+
     private var generalSettingsPanel: some View {
         Form {
             Section {
                 LabeledContent {
-                    TextField("", text: $appModel.appSettings.millisecondsToHoldStr)
+                    TextField("", text: millisecondsToHoldStrBinding)
                         .frame(width: 80)
                         .multilineTextAlignment(.trailing)
-                        .accessibilityLabel("Milliseconds")
+                        .accessibilityLabel("Chord hold delay in milliseconds")
                 } label: {
                     settingsRowLabel(
                         title: "Chord hold delay",
-                        hint: "Must be smaller than the key repeat delay in your system settings, otherwise chords will not work properly."
+                        hint: "Must be between \(Int(AppSettings.minimumHoldMilliseconds)) and \(Int(AppSettings.maximumHoldMilliseconds)) ms, and smaller than the key repeat delay in your system settings."
                     )
                 }
-                Toggle(isOn: $appModel.appSettings.useAccessibilityAPI) {
+                if let holdDelayValidationMessage {
+                    Text(holdDelayValidationMessage)
+                        .font(.settingsHint)
+                        .foregroundColor(.red)
+                }
+                Toggle(isOn: useAccessibilityAPIBinding) {
                     settingsRowLabel(
                         title: "Use Accessibility API for replacement",
                         hint: "When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal)."
@@ -887,22 +1081,22 @@ struct SettingsView: View {
             Section {
                 permissionRow(
                     title: "Input monitoring",
-                    hasPermission: delegate.hasInputMonitoringPermission(),
+                    hasPermission: settingsActions.hasInputMonitoringPermission(),
                     grantAction: {
-                        delegate.requestInputMonitoringPermission()
-                        delegate.openInputMonitoringSettings()
+                        settingsActions.requestInputMonitoringPermission()
+                        settingsActions.openInputMonitoringSettings()
                     },
-                    openSettingsAction: delegate.openInputMonitoringSettings
+                    openSettingsAction: settingsActions.openInputMonitoringSettings
                 )
 
                 permissionRow(
                     title: "Accessibility",
-                    hasPermission: delegate.hasAccessibilityPermission(),
+                    hasPermission: settingsActions.hasAccessibilityPermission(),
                     grantAction: {
-                        delegate.requestAccessibilityPermission()
-                        delegate.openAccessibilitySettings()
+                        settingsActions.requestAccessibilityPermission()
+                        settingsActions.openAccessibilitySettings()
                     },
-                    openSettingsAction: delegate.openAccessibilitySettings
+                    openSettingsAction: settingsActions.openAccessibilitySettings
                 )
             } header: {
                 Text("Permissions")
@@ -932,139 +1126,14 @@ struct SettingsView: View {
             }
             Button("Open settings", action: openSettingsAction)
         }
-    }
-}
-
-/// Observes double-clicks on the underlying `NSTableView` without intercepting single clicks.
-private struct TableDoubleClickHandler: NSViewRepresentable {
-    let onDoubleClick: (Int) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onDoubleClick: onDoubleClick)
-    }
-
-    func makeNSView(context: Context) -> InstallerView {
-        let view = InstallerView()
-        view.coordinator = context.coordinator
-        return view
-    }
-
-    func updateNSView(_ nsView: InstallerView, context: Context) {
-        context.coordinator.onDoubleClick = onDoubleClick
-        nsView.coordinator = context.coordinator
-        nsView.installIfNeeded()
-    }
-
-    static func dismantleNSView(_ nsView: InstallerView, coordinator: Coordinator) {
-        coordinator.stopMonitoring()
-    }
-
-    final class Coordinator {
-        var onDoubleClick: (Int) -> Void
-        private var monitor: Any?
-        private weak var tableView: NSTableView?
-
-        init(onDoubleClick: @escaping (Int) -> Void) {
-            self.onDoubleClick = onDoubleClick
-        }
-
-        func startMonitoring(tableView: NSTableView) {
-            guard self.tableView !== tableView else {
-                return
-            }
-            stopMonitoring()
-            self.tableView = tableView
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-                guard let self, let tableView = self.tableView else {
-                    return event
-                }
-                guard event.clickCount == 2, event.window === tableView.window else {
-                    return event
-                }
-                let point = tableView.convert(event.locationInWindow, from: nil)
-                guard tableView.bounds.contains(point) else {
-                    return event
-                }
-                let row = tableView.row(at: point)
-                guard row >= 0 else {
-                    return event
-                }
-                self.onDoubleClick(row)
-                return event
-            }
-        }
-
-        func stopMonitoring() {
-            if let monitor {
-                NSEvent.removeMonitor(monitor)
-                self.monitor = nil
-            }
-            tableView = nil
-        }
-
-        deinit {
-            stopMonitoring()
-        }
-    }
-
-    final class InstallerView: NSView {
-        weak var coordinator: Coordinator?
-        private weak var installedTableView: NSTableView?
-        private var installAttempts = 0
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            installIfNeeded()
-        }
-
-        func installIfNeeded() {
-            guard installedTableView == nil, let coordinator else {
-                return
-            }
-            guard installAttempts < 20 else {
-                return
-            }
-            installAttempts += 1
-
-            guard let tableView = findTableView() else {
-                DispatchQueue.main.async { [weak self] in
-                    self?.installIfNeeded()
-                }
-                return
-            }
-
-            installedTableView = tableView
-            coordinator.startMonitoring(tableView: tableView)
-        }
-
-        private func findTableView() -> NSTableView? {
-            var current: NSView? = self
-            while let view = current {
-                if let tableView = searchForTableView(in: view) {
-                    return tableView
-                }
-                current = view.superview
-            }
-            return nil
-        }
-
-        private func searchForTableView(in view: NSView) -> NSTableView? {
-            if let tableView = view as? NSTableView {
-                return tableView
-            }
-            for subview in view.subviews {
-                if let tableView = searchForTableView(in: subview) {
-                    return tableView
-                }
-            }
-            return nil
-        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(hasPermission ? "permission granted" : "permission missing")")
     }
 }
 
 struct Settings_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsView(appModel: AppModel())
+        SettingsView(appModel: AppModel(), settingsActions: PermissionCoordinator())
     }
 }
 

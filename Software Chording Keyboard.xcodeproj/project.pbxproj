@@ -26,6 +26,10 @@
 		C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */; };
 		D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */; };
 		E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */; };
+		F1A2B3C5032DA6B2D200B360A6 /* PermissionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */; };
+		F1A2B3C5052DA6B2D200B360A6 /* TextReplacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */; };
+		G2B3C4D6032DA6B2D200B360A7 /* AppDelegate+Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */; };
+		G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +73,10 @@
 		C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordUsageStats.swift; sourceTree = "<group>"; };
 		D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMigration.swift; sourceTree = "<group>"; };
 		E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordDetectionState.swift; sourceTree = "<group>"; };
+		F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCoordinator.swift; sourceTree = "<group>"; };
+		F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextReplacer.swift; sourceTree = "<group>"; };
+		G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Keyboard.swift"; sourceTree = "<group>"; };
+		G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+StatusBar.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,13 +138,25 @@
 			children = (
 				082708E92E4760AA0015A4F4 /* Software-Chording-Keyboard-Info.plist */,
 				081B0B0729E4314C0052A0BD /* Constants */,
+				F1A2B3C5132DA6B2D200B360A6 /* Services */,
 				08E19F2229DE1C910081AB4E /* Views */,
 				08E19F1D29DE1A760081AB4E /* Models */,
 				08E19F1C29DE1A3C0081AB4E /* Trunk */,
 				08E19EF129DE19F80081AB4E /* AppDelegate.swift */,
+				G2B3C4D6042DA6B2D200B360A7 /* AppDelegate+Keyboard.swift */,
+				G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */,
 				08E19EF529DE19F90081AB4E /* Assets.xcassets */,
 			);
 			path = "Software Chording Keyboard";
+			sourceTree = "<group>";
+		};
+		F1A2B3C5132DA6B2D200B360A6 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F1A2B3C5042DA6B2D200B360A6 /* PermissionCoordinator.swift */,
+				F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		08E19F0229DE19F90081AB4E /* Software Chording KeyboardTests */ = {
@@ -339,6 +359,10 @@
 				C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */,
 				D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */,
 				E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */,
+				F1A2B3C5032DA6B2D200B360A6 /* PermissionCoordinator.swift in Sources */,
+				F1A2B3C5052DA6B2D200B360A6 /* TextReplacer.swift in Sources */,
+				G2B3C4D6032DA6B2D200B360A7 /* AppDelegate+Keyboard.swift in Sources */,
+				G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -679,8 +703,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

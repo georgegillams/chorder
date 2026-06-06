@@ -22,6 +22,8 @@ final class ChordDetectionState {
     private(set) var phase: ChordDetectionPhase = .idle
     private var heldKeys: [HeldKey] = []
     private var holdWorkItem: DispatchWorkItem?
+    /// Synthetic key events (CGEvent) echoed back through global monitors.
+    private var pendingEchoes = 0
 
     var onChordMatched: ((String) -> Void)?
     /// Check against configured chords (sorted input key). Wired once at launch; registry
@@ -31,8 +33,32 @@ final class ChordDetectionState {
     func reset() {
         cancelHoldTimer()
         heldKeys.removeAll()
+        pendingEchoes = 0
         phase = .idle
         gDebugPrint("ChordDetectionState: reset")
+    }
+
+    /// Registers monitor callbacks to skip after posting synthetic key events.
+    func scheduleEchoes(_ count: Int) {
+        pendingEchoes += count
+        gDebugPrint("ChordDetectionState: scheduleEchoes count=\(count) pending=\(pendingEchoes)")
+    }
+
+    /// Returns true when this monitor callback should be ignored (synthetic echo).
+    func consumeEchoIfPending() -> Bool {
+        guard pendingEchoes > 0 else { return false }
+        pendingEchoes -= 1
+        gDebugPrint("ChordDetectionState: consumeEcho remaining=\(pendingEchoes)")
+        if pendingEchoes == 0, phase == .replacing {
+            finishReplacement()
+        }
+        return true
+    }
+
+    /// Completes replacement immediately when no synthetic echoes are still in flight.
+    func endReplacementIfNoPendingEchoes() {
+        guard phase == .replacing, pendingEchoes == 0 else { return }
+        finishReplacement()
     }
 
     func keyDown(keyCode: UInt16, character: String?, holdDuration: TimeInterval) {

@@ -10,6 +10,8 @@ import Foundation
 import AppKit
 import SwiftUI
 
+/// Runtime shift-toggle state applied when a chord fires.
+/// Per-chord output casing defaults use `ChordCapitalisationMode` instead.
 enum CapitalisationMode {
     case off, singleCharacter, fullCapitalisation
 }
@@ -39,7 +41,7 @@ class KeyboardConstants {
     static let returnEventKey = 36
     static let returnKeyCode = CGKeyCode(returnEventKey)
     static let fullStopEventKey = 47
-    static let fullStopKeyCode = CGKeyCode(returnEventKey)
+    static let fullStopKeyCode = CGKeyCode(fullStopEventKey)
     static let shiftEventKey = 52
     static let shiftKeyCode = CGKeyCode(shiftEventKey)
     static let deleteEventKey = 127

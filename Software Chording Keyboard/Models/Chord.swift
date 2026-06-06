@@ -109,11 +109,19 @@ struct ResolvedChordReplacement {
     let backspacesBeforeOutput: Int
 }
 
+/// A chord definition stored in settings. This is a reference type: update chords through
+/// `AppSettings` APIs so `@Published` chord lists, lookup dictionaries, and file writes stay in sync.
 class Chord: Identifiable, ObservableObject {
     let id: String
     @Published var input: String
     static func normalisedInputKey(for input: String) -> String {
         String(input.lowercased().sorted())
+    }
+
+    /// True when the same letter appears more than once (cannot be held simultaneously on one keyboard).
+    static func hasDuplicateInputLetters(_ input: String) -> Bool {
+        let lower = input.lowercased()
+        return Set(lower).count != lower.count
     }
 
     var inputSorted: String {
@@ -192,7 +200,7 @@ class Chord: Identifiable, ObservableObject {
     func wantsSpaceBeforeInputWhenTyped(autoInsertedSpaceBeforeInput: Bool) -> Bool {
         switch spaceBeforeOutputMode {
         case .default:
-            return autoInsertedSpaceBeforeInput && !hasPipe
+            return autoInsertedSpaceBeforeInput
         case .always:
             return true
         case .never:
