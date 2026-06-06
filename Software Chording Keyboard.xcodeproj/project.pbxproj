@@ -25,6 +25,7 @@
 		B2C3D4E62DA6B2D200B360A2 /* MachineIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */; };
 		C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */; };
 		D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */; };
+		E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +68,7 @@
 		B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIdentifier.swift; sourceTree = "<group>"; };
 		C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordUsageStats.swift; sourceTree = "<group>"; };
 		D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMigration.swift; sourceTree = "<group>"; };
+		E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordDetectionState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -175,6 +177,7 @@
 				B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */,
 				C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */,
 				D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */,
+				E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -335,6 +338,7 @@
 				B2C3D4E62DA6B2D200B360A2 /* MachineIdentifier.swift in Sources */,
 				C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */,
 				D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */,
+				E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -196,4 +196,83 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertTrue(migrated?.legacyUsageByInput.isEmpty ?? false)
     }
 
+    func testChordDetectionNormalisedKeyIsOrderIndependent() {
+        let detection = ChordDetectionState()
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: 1)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: 1)
+        XCTAssertEqual(detection.normalisedInputKey(), "ht")
+        XCTAssertEqual(detection.joinedCharactersLowercased(), "th")
+    }
+
+    func testChordDetectionIgnoresKeyRepeat() {
+        let detection = ChordDetectionState()
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: 1)
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: 1)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: 1)
+        XCTAssertEqual(detection.joinedCharactersLowercased(), "th")
+    }
+
+    func testChordDetectionKeyUpRemovesByKeyCode() {
+        let detection = ChordDetectionState()
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: 1)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: 1)
+        detection.keyUp(keyCode: 17, holdDuration: 1)
+        XCTAssertEqual(detection.joinedCharactersLowercased(), "h")
+        XCTAssertEqual(detection.phase, .accumulating)
+    }
+
+    func testChordDetectionFiresAfterHoldWhenStable() {
+        let detection = ChordDetectionState()
+        let holdDuration: TimeInterval = 0.05
+        let expectation = expectation(description: "chord matched")
+
+        detection.onChordMatched = { normalisedKey in
+            XCTAssertEqual(normalisedKey, "ht")
+            expectation.fulfill()
+        }
+
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: holdDuration)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: holdDuration)
+
+        waitForExpectations(timeout: 1)
+    }
+
+    func testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes() {
+        let detection = ChordDetectionState()
+        let holdDuration: TimeInterval = 0.1
+        var matchedKeys: [String] = []
+
+        detection.onChordMatched = { normalisedKey in
+            matchedKeys.append(normalisedKey)
+        }
+
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: holdDuration)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: holdDuration)
+
+        let earlyExpectation = expectation(description: "original hold window elapses")
+        DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration + 0.02) {
+            earlyExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 1)
+
+        detection.keyDown(keyCode: 34, character: "i", holdDuration: holdDuration)
+
+        let lateExpectation = expectation(description: "updated hold window elapses")
+        DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration + 0.02) {
+            lateExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 1)
+
+        XCTAssertEqual(matchedKeys, ["hit"])
+    }
+
+    func testChordDetectionResetClearsHeldKeys() {
+        let detection = ChordDetectionState()
+        detection.keyDown(keyCode: 17, character: "t", holdDuration: 1)
+        detection.keyDown(keyCode: 4, character: "h", holdDuration: 1)
+        detection.reset()
+        XCTAssertEqual(detection.phase, .idle)
+        XCTAssertEqual(detection.joinedCharactersLowercased(), "")
+    }
+
 }

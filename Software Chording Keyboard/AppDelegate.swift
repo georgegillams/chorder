@@ -55,7 +55,6 @@ import SwiftUI
  - [ ] When a chord is detected, it is added to the chord history. At this point, if the chord matches one of our config, the letters typed are removed and the chord output typed.
  - [ ] If the last 2 chords form a chained chord, the previous input and new input are removed and all replaced with the chained chord.
  - [ ] Share more code between AX and CGEvent paths
- - [ ] **Full code/system review**
 
  ## Spaces
  - [x] If a chord is entered, we enter space-owed mode.
@@ -90,8 +89,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
     /* Typing */
 
     // TODO: Can we replace ignoreKeyPresses with mode = "Working". If Working, ignore.
-    var ignorekeyPresses = 0
-    var inputCharacters = NSMutableArray()
+    var ignoreKeyPresses = 0
+    private let chordDetection = ChordDetectionState()
     var owedSpace = false
     var autoInsertedSpaceBeforeCurrentInput = false
     var shiftPressedDown = false
@@ -119,9 +118,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             // Shift has been released
             shiftPressedDown = false
 
-            // Remove all characters. There's a strange issue where, sometimes, after shift is released, the characters typed with shift pressed (eg @) remain in the input characters array.
-            // This solves it by clearning input letters when shift is released.
-            inputCharacters.removeAllObjects()
+            // Remove all characters. There's a strange issue where, sometimes, after shift is released, the characters typed with shift pressed (eg @) remain in the held-key set.
+            // This solves it by clearing held keys when shift is released.
+            chordDetection.reset()
             autoInsertedSpaceBeforeCurrentInput = false
 
 
@@ -150,9 +149,9 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
     func keyDownHandler (event: NSEvent) {
         // if the key presses are being sent by this app, we'll ignore them
-        if(ignorekeyPresses > 0) {
-            ignorekeyPresses -= 1
-            gDebugPrint("ignorekeyPresses \(ignorekeyPresses)")
+        if(ignoreKeyPresses > 0) {
+            ignoreKeyPresses -= 1
+            gDebugPrint("ignorekeyPresses \(ignoreKeyPresses)")
             return
         }
 
@@ -172,10 +171,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             otherKeysPressedDuringShift = true
         }
 
-        //  Ignore space and backspace and clear inputCharacters
+        //  Ignore space and backspace and clear held keys
         if (eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.tabEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.escapeEventKey) {
             capitalisationMode = .off
-            inputCharacters.removeAllObjects()
+            chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
             return
@@ -184,7 +183,7 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // If navigating through text, clear everything
         if (eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey) {
             capitalisationMode = .off
-            inputCharacters.removeAllObjects()
+            chordDetection.reset()
             owedSpace = false
             autoInsertedSpaceBeforeCurrentInput = false
             return
@@ -206,53 +205,51 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
             autoInsertedSpaceBeforeCurrentInput = true
 
             gDebugPrint("ADDING SPACE")
-            self.ignorekeyPresses += 2
+            // pressKey posts keyDown + keyUp; typeText posts keyDown + keyUp.
+            self.ignoreKeyPresses += 4
             // Note: We don't need to set any ignored key-presses, as backpace and space are already ignored
             self.pressKey(keyCode: KeyboardConstants.backspaceKeyCode)
             self.typeText(text: " \(character ?? "")" )
         }
 
-//        self.charactersTypedSinceSpaceOwed += 1
-
-        inputCharacters.add(character)
-        gDebugPrint("inputCharacters \(inputCharacters)")
-
-        if (inputCharacters.count <= 1){
-            return
-        }
-
-        let inputKeysString = inputCharacters.componentsJoined(by: "").lowercased()
-
-        gDebugPrint("inputKeysString \(inputKeysString)")
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + (appModel.appSettings.millisecondsToHold/1000)) {
-            let inputKeysStringAfterDelay = self.inputCharacters.componentsJoined(by: "").lowercased()
-            gDebugPrint("inputKeysStringAfterDelay \(inputKeysStringAfterDelay)")
-
-            // Suppose we have 2 chords that use the same input. eg hi->hi and hid->hid
-            // If a user pressed hid together, we shouldn't print "hi" as, even if the inputKeysString was "hi", by the time the hold duration has passed, the inputKeys will have changed.
-            if(inputKeysString == inputKeysStringAfterDelay) {
-                let chord = self.appModel.appSettings.alphabeticalInputOutputMappingDictionary[String(inputKeysString.sorted())]
-
-                if(chord != nil) {
-                    gDebugPrint("** Matched chord: \(chord?.input)")
-                    // self.inputCharacters.removeAllObjects()
-
-                    self.replaceCharacters(chord: chord!)
-                    self.appModel.appSettings.incrementUsage(for: chord!)
-                    self.appModel.appSettings.setUsageCountDirty()
-                    self.capitalisationMode = .off
-//                    self.charactersTypedSinceSpaceOwed = 0
-                }
-            }
-        }
+        chordDetection.keyDown(
+            keyCode: eventKey,
+            character: character,
+            holdDuration: appModel.appSettings.millisecondsToHold / 1000
+        )
+        gDebugPrint("chordDetection phase \(chordDetection.phase) joined \(chordDetection.joinedCharactersLowercased())")
     }
 
     func keyUpHandler (event: NSEvent) {
-        let character = event.characters
+        if ignoreKeyPresses > 0 {
+            ignoreKeyPresses -= 1
+            gDebugPrint("ignorekeyPresses (keyUp) \(ignoreKeyPresses)")
+            return
+        }
 
-        self.inputCharacters.remove(character)
-        gDebugPrint("inputCharacters \(self.inputCharacters)")
+        chordDetection.keyUp(
+            keyCode: event.keyCode,
+            holdDuration: appModel.appSettings.millisecondsToHold / 1000
+        )
+        gDebugPrint("chordDetection phase \(chordDetection.phase) joined \(chordDetection.joinedCharactersLowercased())")
+    }
+
+    private func handleChordMatch(normalisedInputKey: String) {
+        guard let chord = appModel.appSettings.alphabeticalInputOutputMappingDictionary[normalisedInputKey] else {
+            gDebugPrint("No chord for normalised input '\(normalisedInputKey)'")
+            chordDetection.resumeAccumulating()
+            return
+        }
+
+        gDebugPrint("** Matched chord: \(chord.input)")
+        chordDetection.beginReplacement()
+
+        replaceCharacters(chord: chord)
+        appModel.appSettings.incrementUsage(for: chord)
+        appModel.appSettings.setUsageCountDirty()
+        capitalisationMode = .off
+
+        chordDetection.finishReplacement()
     }
 
 
@@ -281,9 +278,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         // The bonus * works around autocomplete fields (eg browser URL bars) where the first backspace
         // would otherwise dismiss the highlighted suggestion rather than deleting the last typed char.
 
-        // We only need to ignore 1 keypress per output chunk, as we're sending all the text from each chunk in one event.
-        // We add 2 extras as we type and remove a bonus * character.
-        ignorekeyPresses += chord.input.count + outputSegments.count + pipeLeftCount + resolved.backspacesBeforeOutput + 2
+        // pressKey posts keyDown + keyUp; typeText posts keyDown + keyUp per chunk.
+        // We add 2 extras for the bonus * typeText (down + up).
+        let syntheticKeyPressCount = chord.deleteCount + 1 + resolved.backspacesBeforeOutput + pipeLeftCount
+        ignoreKeyPresses += (2 * syntheticKeyPressCount) + (2 * outputSegments.count) + 2
 
         typeText(text: "*")
 
@@ -501,6 +499,8 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
         let source = CGEventSource(stateID: .hidSystemState)
         let eventDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         eventDown?.post(tap: .cghidEventTap)
+        let eventUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        eventUp?.post(tap: .cghidEventTap)
     }
 
     func typeText(text: String) {
@@ -590,6 +590,10 @@ class AppDelegate: NSObject, NSApplicationDelegate,NSWindowDelegate {
 
         checkInputAccess()
         createStatusBarButton()
+
+        chordDetection.onChordMatched = { [weak self] normalisedInputKey in
+            self?.handleChordMatch(normalisedInputKey: normalisedInputKey)
+        }
 
         NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flagsChangedHandler)
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: keyDownHandler)
