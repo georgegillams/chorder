@@ -40,7 +40,6 @@ struct TextReplacer {
     /// Replaces chord input via synthetic key events. Returns the number of monitor callbacks to ignore.
     func replaceViaSyntheticKeys(chord: Chord, resolved: ResolvedChordReplacement) -> Int {
         let outputSegments = resolved.segments
-        let pipeLeftCount = resolved.leftArrowCount
         let ignoreCount = resolved.syntheticKeyEchoCount(inputDeleteCount: chord.deleteCount)
 
         typeText("*")
@@ -58,7 +57,7 @@ struct TextReplacer {
         }
         gDebugPrint("typed \(outputSegments)")
 
-        for _ in 0..<pipeLeftCount {
+        for _ in 0..<resolved.leftArrowCount {
             pressKey(keyCode: KeyboardConstants.leftKeyCode)
         }
 
@@ -67,9 +66,15 @@ struct TextReplacer {
 
     /// Attempts to replace the chord input with the chord output via the Accessibility API.
     /// Returns true on success, false if any AX call fails (caller should fall back to synthetic keys).
+    /// Reasons this could fail:
+    /// - Sandboxed app
+    /// - Current app is broken with AX, and put in exclude list (eg Firefox)
+    /// - Current app doesn't report focused element or cursor position (eg Electron apps)
+    /// - Current app is not writable via AX (eg Terminal)
     func replaceViaAccessibility(chord: Chord, resolved: ResolvedChordReplacement) -> Bool {
         gDebugPrint("AX: attempting replacement for chord '\(chord.input)' → '\(resolved.outputText)'")
 
+        // 1. Skip known-broken apps, then locate the focused text field.
         if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
            axIncompatibleAppBundleIDs.contains(bundleID) {
             return axFail("app '\(bundleID)' is on the AX-incompatible list (known broken kAXSelectedTextAttribute writes)")
@@ -82,6 +87,7 @@ struct TextReplacer {
         }
         let focused = focusedRef as! AXUIElement
 
+        // 2. Check replacement feasibility — need a cursor position and a writable selected-text attribute.
         var rangeRef: AnyObject?
         guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
               let rangeValue = rangeRef else {
@@ -112,6 +118,7 @@ struct TextReplacer {
         }
         gDebugPrint("AX: fieldValue length=\((fieldValue as NSString).length) value='\(fieldValue)'")
 
+        // 3. Confirm the chord input (and any leading space to remove) sits immediately before the cursor, then compute the range we intend to select.
         let verified: AccessibilityReplacementVerification.VerifiedSelection
         switch AccessibilityReplacementVerification.verifiedSelection(
             fieldValue: fieldValue,
@@ -142,6 +149,7 @@ struct TextReplacer {
         }
         gDebugPrint("AX: selectedText after selection='\(selectedText)'")
 
+        // 4. Read back what AX actually selected; abort and restore the cursor if it does not match the chord input we expected.
         switch AccessibilityReplacementVerification.verifySelectedText(
             selectedText,
             chordInput: chord.input,
@@ -154,6 +162,7 @@ struct TextReplacer {
             break
         }
 
+        // 5. Overwrite the verified selection with the chord output.
         let output = resolved.outputText
         gDebugPrint("AX: writing output='\(output)'")
         guard AXUIElementSetAttributeValue(focused, kAXSelectedTextAttribute as CFString, output as CFTypeRef) == .success else {
@@ -173,8 +182,7 @@ struct TextReplacer {
             }
         }
 
-        let pipeLeftCount = resolved.leftArrowCount
-        if pipeLeftCount > 0 {
+        if resolved.leftArrowCount > 0 {
             var afterRangeRef: AnyObject?
             guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, &afterRangeRef) == .success,
                   let afterRangeValue = afterRangeRef else {
@@ -191,7 +199,7 @@ struct TextReplacer {
             let insertionEnd = afterRange.location + afterRange.length
             let finalLoc = AccessibilityReplacementVerification.pipeCursorLocation(
                 afterInsertionEnd: insertionEnd,
-                leftArrowCount: pipeLeftCount
+                leftArrowCount: resolved.leftArrowCount
             )
             var finalRange = CFRange(location: finalLoc, length: 0)
             guard let finalAXVal = AXValueCreate(.cfRange, &finalRange) else {
@@ -200,11 +208,11 @@ struct TextReplacer {
                 return true
             }
             guard AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute as CFString, finalAXVal) == .success else {
-                gDebugPrint("AX: warning — could not reposition cursor for pipe (target location \(finalLoc), leftArrowCount \(pipeLeftCount))")
+                gDebugPrint("AX: warning — could not reposition cursor for pipe (target location \(finalLoc), leftArrowCount \(resolved.leftArrowCount))")
                 gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")
                 return true
             }
-            gDebugPrint("AX: pipe cursor repositioned to location \(finalLoc) (leftArrowCount \(pipeLeftCount))")
+            gDebugPrint("AX: pipe cursor repositioned to location \(finalLoc) (leftArrowCount \(resolved.leftArrowCount))")
         }
 
         gDebugPrint("AX: replacement succeeded for chord '\(chord.input)' → '\(output)'")

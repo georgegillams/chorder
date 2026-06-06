@@ -31,7 +31,7 @@ private struct StatsMetricCard: View {
                     .foregroundStyle(.white.opacity(0.95))
 
                 Text(subtitle)
-                    .font(.settingsHint)
+                    .font(.callout)
                     .foregroundStyle(.white.opacity(0.8))
             }
         }
@@ -120,7 +120,7 @@ struct StatsView: View {
                 .font(.system(size: 34, weight: .bold, design: .rounded))
 
             Text("Every chord represents keystrokes you never had to type.")
-                .font(.settingsSecondary)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -181,7 +181,7 @@ struct StatsView: View {
                     .font(.headline)
 
                 Text("Keep chording — those saved seconds add up fast.")
-                    .font(.settingsSecondary)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
@@ -233,7 +233,7 @@ struct StatsView: View {
                 .font(.headline)
 
             Text("Use a chord in any app and your stats will appear here — colourful celebrations included.")
-                .font(.settingsSecondary)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
@@ -251,7 +251,7 @@ struct StatsView: View {
             "Stats combine usage across all machines synced to your settings folder. "
             + "Time saved assumes average typing speed of about 40 words per minute."
         )
-        .font(.settingsHint)
+        .font(.callout)
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 560)

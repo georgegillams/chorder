@@ -292,6 +292,16 @@ class Chord: Identifiable, ObservableObject {
         return (Self.capitalisedSegments(segments, mode: effectiveCapitalisationMode), after.count)
     }
 
+    /// Resolved output text (placeholders expanded, pipe removed). Uses the current date for `{{date}}` tokens.
+    var displayOutput: String {
+        displayOutput(referenceDate: Date())
+    }
+
+    func displayOutput(referenceDate: Date) -> String {
+        let (segments, _) = resolveTypingSegments(referenceDate: referenceDate)
+        return segments.joined()
+    }
+
     /// Resolves replacement output and any space-before-output correction for the matched chord.
     func resolveReplacement(
         referenceDate: Date = Date(),

@@ -429,7 +429,7 @@ struct SettingsView: View {
     @FocusState private var isFilterFieldFocused: Bool
     @State private var sortOrder: [KeyPathComparator<Chord>] = []
     @State private var previousSortOrder: [KeyPathComparator<Chord>] = []
-    @State private var selectedSidebarItem: SettingsSidebarItem? = .chords
+    @State private var selectedSidebarItem: SettingsSidebarItem = .chords
     @State private var showDeleteChordsConfirmation = false
     @State private var showChordInputConflictConfirmation = false
     @State private var conflictingChordForSave: Chord?
@@ -740,17 +740,6 @@ struct SettingsView: View {
                     helpPanel
                 case .settings:
                     generalSettingsPanel
-                case .none:
-                    VStack(spacing: 12) {
-                        Image(systemName: "sidebar.left")
-                            .font(.largeTitle)
-                            .foregroundColor(.secondary)
-                        Text("Select a section")
-                            .font(.headline)
-                        Text("Choose Chords, Practice, Stats, Help, or Settings from the sidebar.")
-                            .font(.settingsSecondary)
-                            .foregroundColor(.secondary)
-                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

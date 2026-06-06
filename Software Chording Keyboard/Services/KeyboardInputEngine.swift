@@ -81,15 +81,12 @@ final class KeyboardInputEngine {
     func handleKeyDown(_ event: NSEvent) {
         let eventKey = event.keyCode
         let character = event.characters
-        gDebugPrint("eventKey \(eventKey) character \(character)")
+        gDebugPrint("eventKey \(eventKey) character \(character ?? "")")
 
         // Modifier shortcuts are not chord input; clear any in-progress detection.
         if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option)
             || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.function) {
-            setCapitalisationMode(.off)
-            chordDetection.reset()
-            owedSpace = false
-            autoInsertedSpaceBeforeCurrentInput = false
+            resetChordInputState()
             return
         }
 
@@ -104,19 +101,13 @@ final class KeyboardInputEngine {
 
         // Ignore space and backspace and clear held keys
         if eventKey == KeyboardConstants.spaceEventKey || eventKey == KeyboardConstants.tabEventKey || eventKey == KeyboardConstants.backspaceEventKey || eventKey == KeyboardConstants.returnEventKey || eventKey == KeyboardConstants.escapeEventKey {
-            setCapitalisationMode(.off)
-            chordDetection.reset()
-            owedSpace = false
-            autoInsertedSpaceBeforeCurrentInput = false
+            resetChordInputState()
             return
         }
 
         // If navigating through text, clear everything
         if eventKey == KeyboardConstants.leftEventKey || eventKey == KeyboardConstants.rightEventKey {
-            setCapitalisationMode(.off)
-            chordDetection.reset()
-            owedSpace = false
-            autoInsertedSpaceBeforeCurrentInput = false
+            resetChordInputState()
             return
         }
 
@@ -128,7 +119,7 @@ final class KeyboardInputEngine {
         }
 
         gDebugPrint("owedSpace \(owedSpace)")
-        gDebugPrint("char \(character)")
+        gDebugPrint("char \(character ?? "")")
 
         if owedSpace {
             owedSpace = false
@@ -183,11 +174,14 @@ final class KeyboardInputEngine {
         )
 
         if appSettings.useAccessibilityAPI {
+
+            // There are numerous reasons that this could fail and return false, in which case we'll fall back to replaceViaSyntheticKeys
             if textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
                 gDebugPrint("replaced via AX")
                 updatePostReplacementSpacingState(for: chord)
                 return
             }
+
         } else {
             gDebugPrint("AX: skipped — useAccessibilityAPI setting is off")
         }
@@ -200,6 +194,14 @@ final class KeyboardInputEngine {
     private func updatePostReplacementSpacingState(for chord: Chord) {
         autoInsertedSpaceBeforeCurrentInput = false
         owedSpace = !chord.hasPipe
+    }
+
+    /// Clears in-progress chord detection when input is interrupted (modifiers, navigation, special keys).
+    private func resetChordInputState() {
+        setCapitalisationMode(.off)
+        chordDetection.reset()
+        owedSpace = false
+        autoInsertedSpaceBeforeCurrentInput = false
     }
 
     private func setCapitalisationMode(_ mode: CapitalisationMode) {
