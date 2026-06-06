@@ -249,6 +249,34 @@ private struct ChordOptionsCell: View {
     }
 }
 
+private struct ChordInputCombinationCell: View {
+    let input: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(input.enumerated()), id: \.offset) { index, character in
+                if index > 0 {
+                    Text("+")
+                        .opacity(0.7)
+                }
+                Text(String(character))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .frame(minWidth: 24, minHeight: 24)
+                    .background {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color.white.opacity(0.35))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 0.5)
+                    }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(input)
+    }
+}
+
 /// Observes double-clicks on the underlying `NSTableView` without intercepting single clicks.
 private struct TableDoubleClickHandler: NSViewRepresentable {
     let onDoubleClick: (Int) -> Void
@@ -793,7 +821,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Table(filteredChords, selection: $selectedChords, sortOrder: $sortOrder) {
                     TableColumn("Input combination", value: \.input) { chord in
-                        Text(chord.input)
+                        ChordInputCombinationCell(input: chord.input)
                     }
                     TableColumn("Output", value: \.output) { chord in
                         Text(chord.output)
