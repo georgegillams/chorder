@@ -8,13 +8,21 @@
 import Foundation
 
 enum SettingsMigration {
+    static let currentMigrationVersion = 1
+
     @discardableResult
     static func run(on appSettings: AppSettings) -> Bool {
+        guard appSettings.migrationVersion < currentMigrationVersion else {
+            return false
+        }
+
         var settingsFileChanged = false
 
-        settingsFileChanged = migrateEmbeddedUsageFromSettings(on: appSettings) || settingsFileChanged
-        settingsFileChanged = persistMissingChordIdsIfNeeded(on: appSettings) || settingsFileChanged
-        settingsFileChanged = migrateInputBasedStatsToChordIds(on: appSettings) || settingsFileChanged
+        if appSettings.migrationVersion < 1 {
+            settingsFileChanged = migrateEmbeddedUsageFromSettings(on: appSettings) || settingsFileChanged
+            settingsFileChanged = persistMissingChordIdsIfNeeded(on: appSettings) || settingsFileChanged
+            settingsFileChanged = migrateInputBasedStatsToChordIds(on: appSettings) || settingsFileChanged
+        }
 
         return settingsFileChanged
     }
@@ -38,6 +46,7 @@ enum SettingsMigration {
                 continue
             }
 
+            var chordMigrationSucceeded = true
             for (machineId, count) in usageByMachine where count > 0 {
                 let fileURL = ChordUsageStore.statsFileURL(
                     for: machineId,
@@ -49,9 +58,12 @@ enum SettingsMigration {
                     try ChordUsageStore.saveMachineUsage(merged, to: fileURL)
                 } catch {
                     gDebugPrint("ERROR migrating embedded settings usage \(error)")
+                    chordMigrationSucceeded = false
                 }
             }
-            migrated = true
+            if chordMigrationSucceeded {
+                migrated = true
+            }
         }
 
         return migrated
@@ -80,7 +92,7 @@ enum SettingsMigration {
         chords: [Chord],
         settingsRootDirectory: URL
     ) -> Bool {
-        let inputToChordId = Dictionary(uniqueKeysWithValues: chords.map { ($0.input, $0.id) })
+        let inputToChordId = normalisedInputToChordId(chords: chords)
         guard !inputToChordId.isEmpty else {
             return false
         }
@@ -104,7 +116,8 @@ enum SettingsMigration {
 
             var usageByChordId = stats.usageByChordId
             for (input, count) in stats.legacyUsageByInput where count > 0 {
-                guard let chordId = inputToChordId[input] else {
+                let normalisedKey = Chord.normalisedInputKey(for: input)
+                guard let chordId = inputToChordId[normalisedKey] ?? inputToChordId[input] else {
                     continue
                 }
                 usageByChordId[chordId] = max(usageByChordId[chordId] ?? 0, count)
@@ -122,6 +135,21 @@ enum SettingsMigration {
         }
 
         return migrated
+    }
+
+    static func normalisedInputToChordId(chords: [Chord]) -> [String: String] {
+        var map: [String: String] = [:]
+        for chord in chords {
+            let key = chord.inputSorted
+            if map[key] != nil {
+                gDebugPrint(
+                    "Warning: stats migration duplicate normalised input '\(key)' — "
+                    + "using chord id \(chord.id)"
+                )
+            }
+            map[key] = chord.id
+        }
+        return map
     }
 
     private static func loadLegacySettings(from url: URL) -> LegacySerialisableAppSettings? {
@@ -164,8 +192,11 @@ struct LegacySerialisableChord: Decodable {
     }
 }
 
-private extension AppSettings {
+extension AppSettings {
     func matchingChord(input: String, output: String) -> Chord? {
-        chords.first { $0.input == input && $0.output == output }
+        let normalisedKey = Chord.normalisedInputKey(for: input)
+        return chords.first {
+            $0.inputSorted == normalisedKey && $0.output == output
+        }
     }
 }

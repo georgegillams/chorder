@@ -9,8 +9,13 @@ import Foundation
 import SwiftUI
 
 class AppSettings: ObservableObject {
+    static let minimumHoldMilliseconds: Double = 10
+    static let maximumHoldMilliseconds: Double = 2000
+
     private var initialisationComplete: Bool = false
     private var suppressWritingToFile: Bool = false
+    private var statsWriteWorkItem: DispatchWorkItem?
+    private(set) var migrationVersion: Int = 0
     @Published private(set) public var isDirty: Bool = false
 
     /* Raw settings */
@@ -22,7 +27,9 @@ class AppSettings: ObservableObject {
     }
     @Published public var millisecondsToHoldStr: String {
         didSet {
-            millisecondsToHold = Double(millisecondsToHoldStr.replacingOccurrences(of: "ms", with: "")) ?? millisecondsToHold
+            if let parsed = Self.parseHoldDelayMilliseconds(from: millisecondsToHoldStr) {
+                millisecondsToHold = parsed
+            }
             writeAppSettingsToFile()
         }
     }
@@ -71,8 +78,39 @@ class AppSettings: ObservableObject {
         machineIdentifier = MachineIdentifier.current
         gDebugPrint("Machine identifier: \(machineIdentifier)")
         bookmarks = BookMarks.restore() ?? BookMarks(data: [:])
+        reconcileSettingsDirectoryWithBookmarks()
         readAppSettingsFromFile()
         initialisationComplete = true
+    }
+
+    func setMigrationVersion(_ version: Int) {
+        migrationVersion = version
+    }
+
+    func reconcileSettingsDirectoryWithBookmarks() {
+        if let bookmarkURL = bookmarks.storedDirectoryURL {
+            if settingsFileDirectory != bookmarkURL {
+                settingsFileDirectory = bookmarkURL
+                UserDefaults.standard.set(bookmarkURL, forKey: "settingsFileDirectory")
+            }
+            return
+        }
+
+        if let settingsFileDirectory {
+            bookmarks.store(url: settingsFileDirectory)
+        }
+    }
+
+    static func parseHoldDelayMilliseconds(from string: String) -> Double? {
+        let trimmed = string
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "ms", with: "", options: .caseInsensitive)
+        guard let value = Double(trimmed),
+              value >= minimumHoldMilliseconds,
+              value <= maximumHoldMilliseconds else {
+            return nil
+        }
+        return value
     }
 
     public func addChord(chord: Chord) {
@@ -148,15 +186,24 @@ class AppSettings: ObservableObject {
     }
 
     func parseSettingsFromJson(json: String) {
+        guard let jsonData = json.data(using: .utf8) else {
+            SettingsAlerts.showSettingsLoadFailure("The settings file is not valid UTF-8 text.")
+            return
+        }
+
         let jsonDecoder = JSONDecoder()
-        let jsonData = json.data(using: .utf8)!
         do {
             let serialisableSettings = try jsonDecoder.decode(SerialisableAppSettings.self, from: jsonData)
+            migrationVersion = serialisableSettings.migrationVersion ?? 0
             millisecondsToHoldStr = serialisableSettings.millisecondsToHold
+            if let parsed = Self.parseHoldDelayMilliseconds(from: serialisableSettings.millisecondsToHold) {
+                millisecondsToHold = parsed
+            }
             useAccessibilityAPI = serialisableSettings.useAccessibilityAPI ?? true
             chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
         } catch {
             gDebugPrint("Error deserialising data \(error)")
+            SettingsAlerts.showSettingsLoadFailure(error.localizedDescription)
         }
     }
 
@@ -206,6 +253,7 @@ class AppSettings: ObservableObject {
 
     func getSettingsJsonString() -> String{
         let serialisableSettings = SerialisableAppSettings(
+            migrationVersion: migrationVersion,
             millisecondsToHold: millisecondsToHoldStr,
             useAccessibilityAPI: useAccessibilityAPI,
             chords: serialiseChords(chords: chords)
@@ -235,9 +283,9 @@ class AppSettings: ObservableObject {
                                  atomically: true,
                                  encoding: .utf8)
             clearDirty()
-        }catch {
-            // Handle error
+        } catch {
             gDebugPrint("ERROR \(error)")
+            SettingsAlerts.showSettingsSaveFailure(error.localizedDescription)
         }
     }
 
@@ -251,6 +299,7 @@ class AppSettings: ObservableObject {
                 parseSettingsFromJson(json: json)
             } catch {
                 gDebugPrint("ERROR \(error)")
+                SettingsAlerts.showSettingsLoadFailure(error.localizedDescription)
             }
         }
 
@@ -260,6 +309,7 @@ class AppSettings: ObservableObject {
 
         suppressWritingToFile = false
         if settingsFileChanged {
+            setMigrationVersion(SettingsMigration.currentMigrationVersion)
             writeAppSettingsToFile()
         }
         clearDirty()
@@ -289,11 +339,8 @@ class AppSettings: ObservableObject {
         dialog.allowedContentTypes = [.directory]
 
         if (dialog.runModal() ==  NSApplication.ModalResponse.OK) {
-            let result = dialog.url
-
-            if (result != nil) {
-                let path = result!.path
-                updateSettingsLocation(newLocation: URL(fileURLWithPath: path))
+            if let result = dialog.url {
+                updateSettingsLocation(newLocation: result)
                 if(FileManager.default.fileExists(atPath: settingsFileLocation.path)) {
                     let alert = NSAlert()
                     alert.messageText = "Settings file already exists. Do you want to overwrite it, or read from it?"
@@ -308,7 +355,7 @@ class AppSettings: ObservableObject {
                 } else {
                     writeAppSettingsToFile()
                 }
-            } 
+            }
         } else {
             // User clicked on "Cancel"
             return
@@ -324,12 +371,19 @@ class AppSettings: ObservableObject {
 
     public func setUsageCountDirty() {
         isDirty = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-            if(self.isDirty && self.initialisationComplete && !self.suppressWritingToFile) {
-                self.writeLocalMachineStatsFile()
-                self.clearDirty()
+        statsWriteWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self,
+                  self.isDirty,
+                  self.initialisationComplete,
+                  !self.suppressWritingToFile else {
+                return
             }
+            self.writeLocalMachineStatsFile()
+            self.clearDirty()
         }
+        statsWriteWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
 
     private func clearDirty() {
@@ -353,6 +407,7 @@ class AppSettings: ObservableObject {
 }
 
 struct SerialisableAppSettings: Codable {
+    var migrationVersion: Int?
     var millisecondsToHold: String
     var useAccessibilityAPI: Bool?  // optional so existing settings files without the key default to true
     var chords: [SerialisableChord]
@@ -386,5 +441,34 @@ struct SerialisableChord: Codable {
         output = try container.decode(String.self, forKey: .output)
         capitalisationMode = try container.decodeIfPresent(String.self, forKey: .capitalisationMode)
         spaceBeforeOutput = try container.decodeIfPresent(String.self, forKey: .spaceBeforeOutput)
+    }
+}
+
+enum SettingsAlerts {
+    static func showSettingsLoadFailure(_ message: String) {
+        present(
+            title: "Could not load settings",
+            message: message,
+            style: .warning
+        )
+    }
+
+    static func showSettingsSaveFailure(_ message: String) {
+        present(
+            title: "Could not save settings",
+            message: message,
+            style: .warning
+        )
+    }
+
+    private static func present(title: String, message: String, style: NSAlert.Style) {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            alert.alertStyle = style
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
 }

@@ -9,7 +9,7 @@ import Combine
 import Foundation
 
 class AppModel: ObservableObject {
-    var appSettings = AppSettings()
+    let appSettings = AppSettings()
     private var cancellables = Set<AnyCancellable>()
 
     init() {

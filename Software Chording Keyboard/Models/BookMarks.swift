@@ -31,11 +31,16 @@ import Foundation
     func store(url: URL) {
         do {
             let bookmark = try url.bookmarkData(options: NSURL.BookmarkCreationOptions.withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-            data[url] = bookmark
+            data = [url: bookmark]
             dump()
         } catch {
             gDebugPrint("Error storing bookmarks")
         }
+    }
+
+    /// The directory URL stored in the bookmark archive, if any.
+    var storedDirectoryURL: URL? {
+        data.keys.first
     }
 
     func dump() {

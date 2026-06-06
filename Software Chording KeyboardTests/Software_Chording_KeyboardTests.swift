@@ -292,6 +292,36 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(detection.joinedCharactersLowercased(), "")
     }
 
+    func testChordDetectionConsumesScheduledEchoes() {
+        let detection = ChordDetectionState()
+        detection.scheduleEchoes(3)
+        XCTAssertTrue(detection.consumeEchoIfPending())
+        XCTAssertTrue(detection.consumeEchoIfPending())
+        XCTAssertTrue(detection.consumeEchoIfPending())
+        XCTAssertFalse(detection.consumeEchoIfPending())
+    }
+
+    func testChordDetectionDefersReplacementFinishUntilEchoesDrain() {
+        let detection = ChordDetectionState()
+        detection.beginReplacement()
+        detection.scheduleEchoes(2)
+        detection.endReplacementIfNoPendingEchoes()
+        XCTAssertEqual(detection.phase, .replacing)
+
+        XCTAssertTrue(detection.consumeEchoIfPending())
+        XCTAssertEqual(detection.phase, .replacing)
+
+        XCTAssertTrue(detection.consumeEchoIfPending())
+        XCTAssertEqual(detection.phase, .idle)
+    }
+
+    func testChordDetectionFinishesReplacementImmediatelyWithoutEchoes() {
+        let detection = ChordDetectionState()
+        detection.beginReplacement()
+        detection.endReplacementIfNoPendingEchoes()
+        XCTAssertEqual(detection.phase, .idle)
+    }
+
     func testDecomposedOutputMarksMultipleUnescapedPipesInvalid() {
         let result = Chord.decomposedOutput(for: "a|b|c")
         XCTAssertTrue(result.invalid)
@@ -336,6 +366,55 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         let (segments, leftArrowCount) = chord.resolveTypingSegments()
         XCTAssertTrue(segments.isEmpty)
         XCTAssertEqual(leftArrowCount, 0)
+    }
+
+    func testHasDuplicateInputLettersDetectsRepeatedCharacters() {
+        XCTAssertFalse(Chord.hasDuplicateInputLetters("th"))
+        XCTAssertTrue(Chord.hasDuplicateInputLetters("tt"))
+        XCTAssertTrue(Chord.hasDuplicateInputLetters("book"))
+    }
+
+    func testParseHoldDelayMillisecondsValidatesRange() {
+        XCTAssertEqual(AppSettings.parseHoldDelayMilliseconds(from: "100ms"), 100)
+        XCTAssertEqual(AppSettings.parseHoldDelayMilliseconds(from: "10"), 10)
+        XCTAssertNil(AppSettings.parseHoldDelayMilliseconds(from: "5ms"))
+        XCTAssertNil(AppSettings.parseHoldDelayMilliseconds(from: "5000ms"))
+        XCTAssertNil(AppSettings.parseHoldDelayMilliseconds(from: "abc"))
+    }
+
+    func testNormalisedInputToChordIdUsesSortedKeys() {
+        let chords = [
+            Chord(id: "a", input: "ba", output: "one"),
+            Chord(id: "b", input: "ab", output: "two"),
+        ]
+        let map = SettingsMigration.normalisedInputToChordId(chords: chords)
+        XCTAssertEqual(map["ab"], "b")
+    }
+
+    func testMigrateInputBasedStatsMatchesNormalisedInput() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let chord = Chord(id: "chord-1", input: "ba", output: "hello")
+        let statsURL = ChordUsageStore.statsFileURL(for: "machine-a", in: root)
+        try ChordUsageStore.saveMachineUsage(
+            MachineUsageStats(legacyUsageByInput: ["ab": 9]),
+            to: statsURL
+        )
+
+        XCTAssertTrue(SettingsMigration.migrateInputBasedStatsToChordIds(
+            chords: [chord],
+            settingsRootDirectory: root
+        ))
+
+        let migrated = ChordUsageStore.loadMachineUsage(from: statsURL)
+        XCTAssertEqual(migrated?.usageByChordId["chord-1"], 9)
+    }
+
+    func testSettingsMigrationSkipsWhenVersionIsCurrent() {
+        let settings = AppSettings()
+        settings.setMigrationVersion(SettingsMigration.currentMigrationVersion)
+        XCTAssertFalse(SettingsMigration.run(on: settings))
     }
 
 }
