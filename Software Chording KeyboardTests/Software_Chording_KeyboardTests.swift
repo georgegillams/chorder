@@ -845,6 +845,67 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(merged.usageByChordId["chord-2"], 1)
     }
 
+    // MARK: - ChordPracticeSelection
+
+    func testChordPracticeSelectionPrefersLowUsageChords() {
+        let low = Chord(input: "ab", output: "alpha", usageByMachine: ["m": 0])
+        let high = Chord(input: "cd", output: "beta", usageByMachine: ["m": 100])
+        var lowPicks = 0
+        for _ in 0..<200 {
+            if ChordPracticeSelection.pick(from: [low, high])?.id == low.id {
+                lowPicks += 1
+            }
+        }
+        XCTAssertGreaterThan(lowPicks, 120)
+    }
+
+    func testChordPracticeSelectionDisplayOutputExpandsPlaceholdersAndRemovesPipe() {
+        let chord = Chord(input: "dt", output: "on {{yyyy}}|day")
+        let display = ChordPracticeSelection.displayOutput(for: chord, referenceDate: Date(timeIntervalSince1970: 0))
+        XCTAssertEqual(display, "on 1970day")
+    }
+
+    func testPracticeChordMonitorDetectsTargetChordHold() {
+        let chord = Chord(input: "th", output: "the")
+        let monitor = PracticeChordMonitor()
+        let success = expectation(description: "practice chord success")
+        monitor.onSuccess = { success.fulfill() }
+        monitor.start(targetChord: chord, holdDurationMilliseconds: 50)
+
+        guard let tDown = Self.keyDownEvent(keyCode: 17, characters: "t"),
+              let hDown = Self.keyDownEvent(keyCode: 4, characters: "h") else {
+            XCTFail("Failed to create key events")
+            return
+        }
+
+        monitor.handleKeyDownForTesting(tDown)
+        monitor.handleKeyDownForTesting(hDown)
+
+        wait(for: [success], timeout: 1.0)
+        monitor.stop()
+    }
+
+    func testPracticeChordMonitorIgnoresWrongChordHold() {
+        let chord = Chord(input: "th", output: "the")
+        let monitor = PracticeChordMonitor()
+        let success = expectation(description: "practice chord success")
+        success.isInverted = true
+        monitor.onSuccess = { success.fulfill() }
+        monitor.start(targetChord: chord, holdDurationMilliseconds: 50)
+
+        guard let aDown = Self.keyDownEvent(keyCode: 0, characters: "a"),
+              let bDown = Self.keyDownEvent(keyCode: 11, characters: "b") else {
+            XCTFail("Failed to create key events")
+            return
+        }
+
+        monitor.handleKeyDownForTesting(aDown)
+        monitor.handleKeyDownForTesting(bDown)
+
+        wait(for: [success], timeout: 0.2)
+        monitor.stop()
+    }
+
     // MARK: - TextReplacer
 
     func testTextReplacerInsertOwedSpaceBeforeReturnsEchoCount() {

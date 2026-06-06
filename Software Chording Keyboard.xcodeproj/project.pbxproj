@@ -31,6 +31,9 @@
 		A2B3C4D7082DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C4D7092DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift */; };
 		H3C4D5E7022DA6B2D200B360A8 /* KeyboardInputEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */; };
 		G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */; };
+		PRCA00012DA6B2D200B360B1 /* ChordPracticeSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */; };
+		PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00042DA6B2D200B360B1 /* PracticeView.swift */; };
+		PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +82,9 @@
 		A2B3C4D7092DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityReplacementVerification.swift; sourceTree = "<group>"; };
 		H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputEngine.swift; sourceTree = "<group>"; };
 		G2B3C4D6062DA6B2D200B360A7 /* AppDelegate+StatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+StatusBar.swift"; sourceTree = "<group>"; };
+		PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordPracticeSelection.swift; sourceTree = "<group>"; };
+		PRCA00042DA6B2D200B360B1 /* PracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeView.swift; sourceTree = "<group>"; };
+		PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeChordMonitor.swift; sourceTree = "<group>"; };
 		TPLN000229DE19F90081AB4E /* AllTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllTests.xctestplan; sourceTree = "<group>"; };
 		TPLN000129DE19F90081AB4E /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -161,6 +167,7 @@
 				H3C4D5E7032DA6B2D200B360A8 /* KeyboardInputEngine.swift */,
 				F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */,
 				A2B3C4D7092DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift */,
+				PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -204,6 +211,7 @@
 				C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */,
 				D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */,
 				E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */,
+				PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -212,6 +220,7 @@
 			isa = PBXGroup;
 			children = (
 				08E19F2329DE1CAD0081AB4E /* Settings.swift */,
+				PRCA00042DA6B2D200B360B1 /* PracticeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -379,6 +388,9 @@
 				A2B3C4D7082DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift in Sources */,
 				H3C4D5E7022DA6B2D200B360A8 /* KeyboardInputEngine.swift in Sources */,
 				G2B3C4D6052DA6B2D200B360A7 /* AppDelegate+StatusBar.swift in Sources */,
+				PRCA00012DA6B2D200B360B1 /* ChordPracticeSelection.swift in Sources */,
+				PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */,
+				PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
