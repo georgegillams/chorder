@@ -39,7 +39,7 @@ struct PracticeView: View {
     @State private var successAdvanceToken = 0
 
     private var chords: [Chord] {
-        appModel.appSettings.chords
+        appModel.appSettings.activeChords
     }
 
     private var targetOutput: String {

@@ -147,8 +147,17 @@ class AppSettings: ObservableObject {
         chords.append(chord)
     }
 
-    public func removeChords(chords: Set<Chord.ID>) {
-        self.chords.removeAll(where: { chords.contains($0.id) })
+    public var activeChords: [Chord] {
+        chords.filter { !$0.deleted }
+    }
+
+    public func removeChords(chords ids: Set<Chord.ID>) {
+        for index in chords.indices where ids.contains(chords[index].id) {
+            chords[index].deleted = true
+        }
+        recalculateAlphabeticalMapping()
+        objectWillChange.send()
+        writeAppSettingsToFile()
     }
 
     public func updateChord(
@@ -181,7 +190,7 @@ class AppSettings: ObservableObject {
         alphabeticalInputOutputMappingDictionary = [:]
         var duplicateKeys: [String] = []
 
-        for chord in chords {
+        for chord in activeChords {
             let key = chord.inputSorted
             if let existing = alphabeticalInputOutputMappingDictionary[key] {
                 duplicateKeys.append(key)
@@ -210,7 +219,8 @@ class AppSettings: ObservableObject {
                 input: serialisableChord.input,
                 output: serialisableChord.output,
                 capitalisationMode: capitalisationMode,
-                spaceBeforeOutputMode: spaceBeforeOutputMode
+                spaceBeforeOutputMode: spaceBeforeOutputMode,
+                deleted: serialisableChord.deleted ?? false
             )
         }
     }
@@ -244,7 +254,8 @@ class AppSettings: ObservableObject {
                 input: chord.input,
                 output: chord.output,
                 capitalisationMode: chord.capitalisationMode.rawValue,
-                spaceBeforeOutput: chord.spaceBeforeOutputMode.rawValue
+                spaceBeforeOutput: chord.spaceBeforeOutputMode.rawValue,
+                deleted: chord.deleted ? true : nil
             )
         }
     }
@@ -449,19 +460,31 @@ struct SerialisableChord: Codable {
     var output: String
     var capitalisationMode: String?
     var spaceBeforeOutput: String?
+    var deleted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case input
+        case output
+        case capitalisationMode
+        case spaceBeforeOutput
+        case deleted
+    }
 
     init(
         id: String,
         input: String,
         output: String,
         capitalisationMode: String?,
-        spaceBeforeOutput: String? = nil
+        spaceBeforeOutput: String? = nil,
+        deleted: Bool? = nil
     ) {
         self.id = id
         self.input = input
         self.output = output
         self.capitalisationMode = capitalisationMode
         self.spaceBeforeOutput = spaceBeforeOutput
+        self.deleted = deleted
     }
 
     init(from decoder: Decoder) throws {
@@ -471,6 +494,19 @@ struct SerialisableChord: Codable {
         output = try container.decode(String.self, forKey: .output)
         capitalisationMode = try container.decodeIfPresent(String.self, forKey: .capitalisationMode)
         spaceBeforeOutput = try container.decodeIfPresent(String.self, forKey: .spaceBeforeOutput)
+        deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(input, forKey: .input)
+        try container.encode(output, forKey: .output)
+        try container.encodeIfPresent(capitalisationMode, forKey: .capitalisationMode)
+        try container.encodeIfPresent(spaceBeforeOutput, forKey: .spaceBeforeOutput)
+        if deleted == true {
+            try container.encode(true, forKey: .deleted)
+        }
     }
 }
 

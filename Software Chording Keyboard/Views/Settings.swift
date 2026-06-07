@@ -461,7 +461,7 @@ struct SettingsView: View {
     }
 
     var filteredChords: [Chord] {
-        var chords = appModel.appSettings.chords
+        var chords = appModel.appSettings.activeChords
 
         // Apply filtering
         if !filterString.isEmpty {
@@ -646,7 +646,7 @@ struct SettingsView: View {
         guard !key.isEmpty else {
             return nil
         }
-        return appModel.appSettings.chords.first { chord in
+        return appModel.appSettings.activeChords.first { chord in
             if chord.id == excludingId {
                 return false
             }

@@ -141,6 +141,7 @@ class Chord: Identifiable, ObservableObject {
     @Published var capitalisationMode: ChordCapitalisationMode
     @Published var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
     @Published var usageByMachine: [String: Int]
+    @Published var deleted: Bool
 
     static let legacyUsageMachineKey = "legacy"
 
@@ -180,7 +181,8 @@ class Chord: Identifiable, ObservableObject {
         output: String,
         usageByMachine: [String: Int] = [:],
         capitalisationMode: ChordCapitalisationMode = .default,
-        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default,
+        deleted: Bool = false
     ) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
         self.id = id
@@ -189,6 +191,7 @@ class Chord: Identifiable, ObservableObject {
         self.usageByMachine = usageByMachine
         self.capitalisationMode = capitalisationMode
         self.spaceBeforeOutputMode = spaceBeforeOutputMode
+        self.deleted = deleted
         rebuildDerivedState()
     }
 

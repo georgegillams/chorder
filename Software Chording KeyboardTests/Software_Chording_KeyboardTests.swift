@@ -812,6 +812,56 @@ final class Software_Chording_KeyboardTests: XCTestCase {
         XCTAssertEqual(reparsed.chords.first?.totalUsageCount, 0)
     }
 
+    func testRemoveChordsSoftDeletesInsteadOfRemoving() {
+        let settings = Self.makeTestSettings()
+        settings.addChord(chord: Chord(id: "chord-1", input: "th", output: "the"))
+        settings.chords.first?.incrementUsageCount(for: "machine-a")
+
+        settings.removeChords(chords: ["chord-1"])
+
+        XCTAssertEqual(settings.chords.count, 1)
+        XCTAssertTrue(settings.chords.first?.deleted ?? false)
+        XCTAssertEqual(settings.activeChords.count, 0)
+        XCTAssertNil(settings.alphabeticalInputOutputMappingDictionary["ht"])
+        XCTAssertEqual(settings.chords.first?.totalUsageCount, 1)
+    }
+
+    func testSoftDeletedChordSerialisesDeletedAttribute() throws {
+        let settings = Self.makeTestSettings()
+        settings.addChord(chord: Chord(id: "chord-1", input: "th", output: "the"))
+        settings.removeChords(chords: ["chord-1"])
+
+        let json = settings.getSettingsJsonString()
+        XCTAssertTrue(json.contains("\"deleted\" : true") || json.contains("\"deleted\": true"))
+
+        let reparsed = Self.makeTestSettings()
+        reparsed.parseSettingsFromJson(json: json)
+        XCTAssertEqual(reparsed.chords.count, 1)
+        XCTAssertTrue(reparsed.chords.first?.deleted ?? false)
+    }
+
+    func testStatsIncludeSoftDeletedChords() {
+        let settings = Self.makeTestSettings()
+        settings.addChord(chord: Chord(id: "chord-1", input: "th", output: "the"))
+        settings.chords.first?.incrementUsageCount(for: "machine-a")
+        settings.removeChords(chords: ["chord-1"])
+
+        let totals = ChordUsageSummary.totals(for: settings.chords)
+        XCTAssertEqual(totals.totalChordsEntered, 1)
+        XCTAssertEqual(totals.totalCharactersSaved, 1)
+    }
+
+    func testActiveChordEncodingOmitsDeletedAttribute() throws {
+        let chord = SerialisableChord(
+            id: "chord-1",
+            input: "abc",
+            output: "hello",
+            capitalisationMode: "default"
+        )
+        let json = String(data: try JSONEncoder().encode(chord), encoding: .utf8)!
+        XCTAssertFalse(json.contains("deleted"))
+    }
+
     // MARK: - ChordUsageStore
 
     func testMachineUsageStatsDecodesLegacyUsageByInputKey() throws {
