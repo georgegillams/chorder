@@ -97,10 +97,6 @@ final class ChordDetectionState {
         cancelHoldTimer()
         updatePhaseAfterHeldKeysChanged()
         gDebugPrint("ChordDetectionState: keyUp keyCode=\(keyCode) held=\(joinedCharactersLowercased()) phase=\(phase)")
-
-        if heldKeys.count >= 2 {
-            scheduleHoldTimer(holdDuration: holdDuration)
-        }
     }
 
     func joinedCharactersLowercased() -> String {
