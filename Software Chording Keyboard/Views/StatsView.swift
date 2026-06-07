@@ -213,7 +213,7 @@ struct StatsView: View {
         case 50...499:
             return "Impressive — your fingers are flying!"
         default:
-            return "Chord master! You've saved serious typing time."
+            return "Chord warrior! You've saved serious typing time."
         }
     }
 
