@@ -161,7 +161,6 @@ final class KeyboardInputEngine {
 
         replaceCharacters(chord: chord)
         appSettings.incrementUsage(for: chord)
-        appSettings.setUsageCountDirty()
         setCapitalisationMode(.off)
 
         chordDetection.endReplacementIfNoPendingEchoes()

@@ -183,6 +183,7 @@ class AppSettings: ObservableObject {
 
     public func incrementUsage(for chord: Chord) {
         chord.incrementUsageCount(for: machineIdentifier)
+        setUsageCountDirty()
         objectWillChange.send()
     }
 
