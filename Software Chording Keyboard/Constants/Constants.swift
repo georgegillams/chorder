@@ -46,5 +46,5 @@ class KeyboardConstants {
     static let shiftKeyCode = CGKeyCode(shiftEventKey)
     static let deleteEventKey = 127
     static let deleteKeyCode = CGKeyCode(deleteEventKey)
-    static let skipPrecedingSpaceCharacters = ["!", "@", "%", "*", ")", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", ".", "&", "#"]
+    static let skipPrecedingSpaceCharacters = ["!", "@", "%", "*", ")", "}", "]", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", ".", "&", "#"]
 }
