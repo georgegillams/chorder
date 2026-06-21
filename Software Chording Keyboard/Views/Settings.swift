@@ -164,8 +164,16 @@ private struct ChordEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text(context.title)
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(context.title)
+                    .font(.headline)
+
+                if case .create = context {
+                    Text("💡 Tip: Hold option (⌥) and click the menu item to quickly add a new chord")
+                        .font(.settingsSecondary)
+                        .foregroundColor(.secondary)
+                }
+            }
 
             Form {
                 TextField("Chord input", text: $input)
