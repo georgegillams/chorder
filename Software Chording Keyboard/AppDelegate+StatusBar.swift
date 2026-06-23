@@ -112,7 +112,7 @@ extension AppDelegate {
     }
 
     @objc func openFeedback() {
-        if let url = URL(string: "https://www.georgegillams.co.uk/contact") {
+        if let url = URL(string: "https://www.georgegillams.co.uk/chorder-feedback") {
             NSWorkspace.shared.open(url)
         }
     }
