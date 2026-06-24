@@ -123,7 +123,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         createStatusBarButton()
         registerGlobalEventMonitors()
 
-        if ProcessInfo.processInfo.arguments.contains("G_DEBUG") {
+        if isGDebugScheme {
             showSettingsWindow()
         }
 
