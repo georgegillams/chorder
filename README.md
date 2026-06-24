@@ -59,7 +59,7 @@ When you **Run** from Xcode, the app uses the **Debug** build configuration. Whe
 | Menu build line | `Software Chording Keyboard local development` | `Software Chording Keyboard {version}` (marketing version) |
 | Accessibility entry | **Software Chording Keyboard (Local)** | **Software Chording Keyboard** |
 | Input Monitoring entry | **Software Chording Keyboard (Local)** | **Software Chording Keyboard** |
-| Debug logging (`gDebugPrint`) | Enabled | Compiled out |
+| Debug logging (`gDebugPrint`) | Enabled when running the **G_DEBUG** scheme | Compiled out |
 | Sandbox / app data | Separate container | App Store container |
 
 Archiving always uses **Release**, so a normal archive produces the production app name, bundle ID, and version label. The local-only settings exist only in the Debug configuration in `Software Chording Keyboard.xcodeproj`.
@@ -93,7 +93,7 @@ Release builds inherit the defaults from `Software-Chording-Keyboard-Info.plist`
 
 **Debug logging**
 
-`Software Chording Keyboard/Models/Debug.swift` wraps `gDebugPrint` in `#if DEBUG`, so log output is compiled out of Release builds.
+`Software Chording Keyboard/Models/Debug.swift` wraps `gDebugPrint` in `#if DEBUG` and only prints when the `G_DEBUG` launch argument is present (`isGDebugScheme`). Use the **G_DEBUG Software Chording Keyboard** scheme to see log output; the normal Debug scheme compiles logging support but stays quiet.
 
 **G_DEBUG Software Chording Keyboard scheme**
 

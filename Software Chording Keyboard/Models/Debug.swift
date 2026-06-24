@@ -8,8 +8,10 @@
 import Foundation
 
 public func gDebugPrint(_ items: Any..., separator: String = " ", terminator: String = "\n") {
-    #if G_DEBUG
-    print(items, separator: separator, terminator: terminator)
+    #if DEBUG
+    guard isGDebugScheme else { return }
+    let message = items.map { "\($0)" }.joined(separator: separator)
+    print(message, terminator: terminator)
     #endif
 }
 
