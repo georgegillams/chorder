@@ -56,7 +56,7 @@ extension AppDelegate {
 
         settingsUI = SettingsView(
             appModel: appModel,
-            settingsActions: permissionCoordinator,
+            settingsActions: self,
             openCreateChordOnAppear: openCreateChord
         )
 
@@ -95,16 +95,16 @@ extension AppDelegate {
     }
 
     @objc func openMenu() {
-        let versionNsObject: AnyObject? = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as AnyObject
-        let version = versionNsObject as! String
+        let buildLabel = Bundle.main.menuBuildLabel
+        let productName = Bundle.main.menuProductName
         let menu = NSMenu()
         menu.addItem(withTitle: "Preferences", action: #selector(showSettingsWindow), keyEquivalent: "")
         menu.addItem(withTitle: "Add Chord…", action: #selector(showSettingsWindowWithNewChord), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Send me feedback", action: #selector(openFeedback), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "\(getTargetName()) \(version)", action: nil, keyEquivalent: ""))
-        menu.addItem(withTitle: "Quit \(getTargetName())", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(NSMenuItem(title: "\(productName) \(buildLabel)", action: nil, keyEquivalent: ""))
+        menu.addItem(withTitle: "Quit \(productName)", action: #selector(quit), keyEquivalent: "q")
 
         statusBarItem.menu = menu
         statusBarItem.button?.performClick(nil)
@@ -112,9 +112,7 @@ extension AppDelegate {
     }
 
     @objc func openFeedback() {
-        if let url = URL(string: "https://www.georgegillams.co.uk/chorder-feedback") {
-            NSWorkspace.shared.open(url)
-        }
+        NSWorkspace.shared.open(Bundle.main.feedbackURL)
     }
 
     @objc func quit() {

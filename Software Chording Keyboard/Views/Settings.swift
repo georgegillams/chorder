@@ -22,6 +22,7 @@ protocol SettingsActions {
     func hasAccessibilityPermission() -> Bool
     func requestAccessibilityPermission()
     func openAccessibilitySettings()
+    func openFeedback()
 }
 
 private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
@@ -30,6 +31,7 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
     case stats
     case help
     case settings
+    case about
 
     var id: String { rawValue }
 
@@ -42,9 +44,11 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
         case .stats:
             return "Stats"
         case .help:
-            return "Help"
+            return "How to use"
         case .settings:
             return "Settings"
+        case .about:
+            return "About"
         }
     }
 
@@ -60,6 +64,8 @@ private enum SettingsSidebarItem: String, CaseIterable, Identifiable {
             return "questionmark.circle"
         case .settings:
             return "gearshape"
+        case .about:
+            return "info.circle"
         }
     }
 }
@@ -748,6 +754,8 @@ struct SettingsView: View {
                     helpPanel
                 case .settings:
                     generalSettingsPanel
+                case .about:
+                    aboutPanel
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1038,7 +1046,38 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Help")
+        .navigationTitle("How to use Chorder")
+    }
+
+    private var aboutPanel: some View {
+        VStack(spacing: 12) {
+            if let icon = NSApplication.shared.applicationIconImage {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 80, height: 80)
+            }
+
+            Text(Bundle.main.appDisplayName)
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Version \(Bundle.main.appVersion)")
+                .font(.settingsSecondary)
+                .foregroundColor(.secondary)
+
+            if Bundle.main.isLocalDevelopment {
+                Text("Local development build")
+                    .font(.settingsHint)
+                    .foregroundColor(.secondary)
+            }
+
+            Button("Provide feedback", action: settingsActions.openFeedback)
+                .buttonStyle(.link)
+                .font(.settingsSecondary)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("About")
     }
 
     private var holdDelayValidationMessage: String? {

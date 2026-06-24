@@ -43,6 +43,10 @@ final class PermissionCoordinator {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 
+    func openFeedback() {
+        NSWorkspace.shared.open(Bundle.main.feedbackURL)
+    }
+
     func beginPermissionChecks() {
         checkNextPermission()
     }
