@@ -14,9 +14,9 @@
   "testTargets" : [
     {
       "target" : {
-        "containerPath" : "container:Software Chording Keyboard.xcodeproj",
+        "containerPath" : "container:Chorder.xcodeproj",
         "identifier" : "08E19EFE29DE19F90081AB4E",
-        "name" : "Software Chording KeyboardTests"
+        "name" : "ChorderTests"
       }
     }
   ],
