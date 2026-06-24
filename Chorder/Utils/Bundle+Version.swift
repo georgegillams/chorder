@@ -38,4 +38,9 @@ extension Bundle {
     var menuBuildLabel: String {
         isLocalDevelopment ? "local development" : appVersion
     }
+
+    /// True when the app is running inside App Sandbox (Release / App Store builds).
+    var isAppSandboxed: Bool {
+        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+    }
 }

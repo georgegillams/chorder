@@ -40,9 +40,9 @@ The app builds and launches from Xcode. Look for the keyboard icon in the menu b
 
 ### Schemes
 
-| Scheme | Use when |
-| --- | --- |
-| **Chorder** | Normal development and testing. |
+| Scheme              | Use when                                                           |
+| ------------------- | ------------------------------------------------------------------ |
+| **Chorder**         | Normal development and testing.                                    |
 | **G_DEBUG Chorder** | Opens Preferences automatically on launch, and enables debug logs. |
 
 No third-party dependencies are required — open the project and build.
@@ -51,16 +51,16 @@ No third-party dependencies are required — open the project and build.
 
 When you **Run** from Xcode, the app uses the **Debug** build configuration. When you **Archive** for release, it uses **Release**. Several deliberate differences make it easy to tell the two apart and stop them interfering with each other.
 
-| | Local development (Debug) | Production (Release / App Store) |
-| --- | --- | --- |
-| App bundle on disk | `Chorder Local.app` | `Chorder.app` |
-| Bundle identifier | `uk.co.georgegillams.chorder.mac-os.local` | `uk.co.georgegillams.chorder.mac-os` |
-| Display name | `Chorder (Local)` | `Chorder` |
-| Menu build line | `Chorder local development` | `Chorder {version}` (marketing version) |
-| Accessibility entry | **Chorder (Local)** | **Chorder** |
-| Input Monitoring entry | **Chorder (Local)** | **Chorder** |
-| Debug logging (`gDebugPrint`) | Enabled when running the **G_DEBUG** scheme | Compiled out |
-| Sandbox / app data | Separate container | App Store container |
+|                               | Local development (Debug)                   | Production (Release / App Store)        |
+| ----------------------------- | ------------------------------------------- | --------------------------------------- |
+| App bundle on disk            | `Chorder Local.app`                         | `Chorder.app`                           |
+| Bundle identifier             | `uk.co.georgegillams.chorder.mac-os.local`  | `uk.co.georgegillams.chorder.mac-os`    |
+| Display name                  | `Chorder (Local)`                           | `Chorder`                               |
+| Menu build line               | `Chorder local development`                 | `Chorder {version}` (marketing version) |
+| Accessibility entry           | **Chorder (Local)**                         | **Chorder**                             |
+| Input Monitoring entry        | **Chorder (Local)**                         | **Chorder**                             |
+| Debug logging (`gDebugPrint`) | Enabled when running the **G_DEBUG** scheme | Compiled out                            |
+| Sandbox / app data            | Separate container                          | App Store container                     |
 
 Archiving always uses **Release**, so a normal archive produces the production app name, bundle ID, and version label. The local-only settings exist only in the Debug configuration in `Chorder.xcodeproj`.
 
@@ -99,16 +99,16 @@ Release builds inherit the defaults from `Chorder-Info.plist` and generated Info
 
 The **G_DEBUG Chorder** scheme is separate from the local/production split. It passes the `G_DEBUG` launch argument (see `Chorder.xcodeproj/xcshareddata/xcschemes/G_DEBUG Chorder.xcscheme`). `isGDebugScheme` in `Debug.swift` checks for that argument and, in `AppDelegate`, opens Preferences on launch. Both schemes still build the Debug configuration when you Run.
 
-For local development, app sandboxing is typically disabled. Re-enable it before release builds.
+Sandboxing is controlled per build configuration via separate entitlements files: **Debug** uses `Chorder/Trunk/Chorder.entitlements` (sandbox off), **Release** uses `Chorder/Trunk/Chorder-Release.entitlements` (sandbox on for App Store). Archiving always uses Release, so uploads are sandboxed automatically. Input Monitoring is requested at runtime via TCC (System Settings); do not add `com.apple.security.device.input-monitoring` to Release entitlements — Apple rejects that key for Mac App Store builds.
 
 ## Running tests
 
 The project uses [Xcode test plans](https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback) in the `TestPlans/` directory:
 
-| Test plan | What it runs |
-|-----------|--------------|
+| Test plan               | What it runs                 |
+| ----------------------- | ---------------------------- |
 | **UnitTests** (default) | Unit tests only — matches CI |
-| **AllTests** | Unit tests + UI tests |
+| **AllTests**            | Unit tests + UI tests        |
 
 ### From Xcode
 
@@ -184,4 +184,14 @@ Then rebuild, run, and grant permission again through Preferences or System Sett
 
 ## Release
 
-Before releasing, re-enable app sandbox in the project entitlements.
+- Update version (marketing version) and build (needs incrementing). In XCode, click Contraster -> General -> Identity -> Version/Build
+- Take screenshots at 1280x800
+- Clean
+- Create build online at https://appstoreconnect.apple.com/
+- Select non-debug scheme
+- Archive
+- Upload
+
+Release archives use `Chorder-Release.entitlements` (App Sandbox enabled, without `input-monitoring`). No manual entitlements changes are needed before upload.
+
+Note: If releasing for manual distribution, disable app sandboxing.

@@ -66,6 +66,7 @@
 		08E19EF529DE19F90081AB4E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		08E19EF829DE19F90081AB4E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		08E19EFA29DE19F90081AB4E /* Chorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Chorder.entitlements; sourceTree = "<group>"; };
+		08REL0129DE19F90081AB4E /* Chorder-Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Chorder-Release.entitlements"; sourceTree = "<group>"; };
 		08E19EFF29DE19F90081AB4E /* ChorderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ChorderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		08E19F0329DE19F90081AB4E /* ChorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorderTests.swift; sourceTree = "<group>"; };
 		08E19F0929DE19F90081AB4E /* ChorderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ChorderUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -199,6 +200,7 @@
 			children = (
 				08E19EF729DE19F90081AB4E /* Main.storyboard */,
 				08E19EFA29DE19F90081AB4E /* Chorder.entitlements */,
+				08REL0129DE19F90081AB4E /* Chorder-Release.entitlements */,
 			);
 			path = Trunk;
 			sourceTree = "<group>";
@@ -608,7 +610,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Chorder/Trunk/Chorder.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Chorder/Trunk/Chorder-Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
