@@ -1112,11 +1112,13 @@ struct SettingsView: View {
                         .font(.settingsHint)
                         .foregroundColor(.red)
                 }
-                Toggle(isOn: useAccessibilityAPIBinding) {
-                    settingsRowLabel(
-                        title: "Use Accessibility API for replacement",
-                        hint: "When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal)."
-                    )
+                if !Bundle.main.isAppSandboxed {
+                    Toggle(isOn: useAccessibilityAPIBinding) {
+                        settingsRowLabel(
+                            title: "Use Accessibility API for replacement",
+                            hint: "When enabled, chords are replaced by directly editing the focused text field via the Accessibility API — no synthetic key events are posted. Falls back to keystroke simulation automatically for apps that don't support it (eg Electron apps, and Terminal)."
+                        )
+                    }
                 }
             } header: {
                 Text("Input")

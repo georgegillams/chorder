@@ -172,7 +172,7 @@ final class KeyboardInputEngine {
             autoInsertedSpaceBeforeInput: autoInsertedSpaceBeforeCurrentInput
         )
 
-        if appSettings.useAccessibilityAPI {
+        if appSettings.useAccessibilityAPI, !Bundle.main.isAppSandboxed {
 
             // There are numerous reasons that this could fail and return false, in which case we'll fall back to replaceViaSyntheticKeys
             if textReplacer.replaceViaAccessibility(chord: chord, resolved: resolved) {
