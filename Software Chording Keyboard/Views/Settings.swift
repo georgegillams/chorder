@@ -1050,31 +1050,36 @@ struct SettingsView: View {
     }
 
     private var aboutPanel: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             if let icon = NSApplication.shared.applicationIconImage {
                 Image(nsImage: icon)
                     .resizable()
-                    .frame(width: 80, height: 80)
+                    .frame(width: 96, height: 96)
             }
 
             Text(Bundle.main.appDisplayName)
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.semibold)
 
             Text("Version \(Bundle.main.appVersion)")
-                .font(.settingsSecondary)
+                .font(.body)
                 .foregroundColor(.secondary)
 
             if Bundle.main.isLocalDevelopment {
                 Text("Local development build")
-                    .font(.settingsHint)
+                    .font(.callout)
                     .foregroundColor(.secondary)
             }
 
             Button("Provide feedback", action: settingsActions.openFeedback)
                 .buttonStyle(.link)
-                .font(.settingsSecondary)
+                .font(.body)
                 .padding(.top, 4)
+
+            Text("Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("About")
