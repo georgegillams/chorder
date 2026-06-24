@@ -1,4 +1,4 @@
-# Software Chording Keyboard
+# Chorder
 
 A macOS app that turns any ordinary keyboard into a chording keyboard — no dedicated hardware required.
 
@@ -27,12 +27,12 @@ Chords can include:
 ```bash
 git clone git@github.com:georgegillams/software-chording-keyboard.git
 cd software-chording-keyboard
-open "Software Chording Keyboard.xcodeproj"
+open "Chorder.xcodeproj"
 ```
 
 In Xcode:
 
-1. Select the **Software Chording Keyboard** scheme.
+1. Select the **Chorder** scheme.
 2. Choose **My Mac** as the run destination.
 3. Press **Run** (⌘R).
 
@@ -42,8 +42,8 @@ The app builds and launches from Xcode. Look for the keyboard icon in the menu b
 
 | Scheme | Use when |
 | --- | --- |
-| **Software Chording Keyboard** | Normal development and testing. |
-| **G_DEBUG Software Chording Keyboard** | Opens Preferences automatically on launch, and enables debug logs. |
+| **Chorder** | Normal development and testing. |
+| **G_DEBUG Chorder** | Opens Preferences automatically on launch, and enables debug logs. |
 
 No third-party dependencies are required — open the project and build.
 
@@ -53,25 +53,25 @@ When you **Run** from Xcode, the app uses the **Debug** build configuration. Whe
 
 | | Local development (Debug) | Production (Release / App Store) |
 | --- | --- | --- |
-| App bundle on disk | `Software Chording Keyboard Local.app` | `Software Chording Keyboard.app` |
-| Bundle identifier | `uk.co.georgegillams.software-chording-keyboard.mac-os.local` | `uk.co.georgegillams.software-chording-keyboard.mac-os` |
-| Display name | `Software Chording Keyboard (Local)` | `Software Chording Keyboard` |
-| Menu build line | `Software Chording Keyboard local development` | `Software Chording Keyboard {version}` (marketing version) |
-| Accessibility entry | **Software Chording Keyboard (Local)** | **Software Chording Keyboard** |
-| Input Monitoring entry | **Software Chording Keyboard (Local)** | **Software Chording Keyboard** |
+| App bundle on disk | `Chorder Local.app` | `Chorder.app` |
+| Bundle identifier | `uk.co.georgegillams.chorder.mac-os.local` | `uk.co.georgegillams.chorder.mac-os` |
+| Display name | `Chorder (Local)` | `Chorder` |
+| Menu build line | `Chorder local development` | `Chorder {version}` (marketing version) |
+| Accessibility entry | **Chorder (Local)** | **Chorder** |
+| Input Monitoring entry | **Chorder (Local)** | **Chorder** |
 | Debug logging (`gDebugPrint`) | Enabled when running the **G_DEBUG** scheme | Compiled out |
 | Sandbox / app data | Separate container | App Store container |
 
-Archiving always uses **Release**, so a normal archive produces the production app name, bundle ID, and version label. The local-only settings exist only in the Debug configuration in `Software Chording Keyboard.xcodeproj`.
+Archiving always uses **Release**, so a normal archive produces the production app name, bundle ID, and version label. The local-only settings exist only in the Debug configuration in `Chorder.xcodeproj`.
 
 #### How each difference is implemented
 
 **App name and bundle identifier**
 
-Set per build configuration in `Software Chording Keyboard.xcodeproj/project.pbxproj`:
+Set per build configuration in `Chorder.xcodeproj/project.pbxproj`:
 
-- **Debug:** `PRODUCT_NAME = "Software Chording Keyboard Local"` and `PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.software-chording-keyboard.mac-os.local`
-- **Release:** `PRODUCT_NAME = "$(TARGET_NAME)"` (→ `Software Chording Keyboard`) and `PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.software-chording-keyboard.mac-os`
+- **Debug:** `PRODUCT_NAME = "Chorder Local"` and `PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.chorder.mac-os.local`
+- **Release:** `PRODUCT_NAME = "$(TARGET_NAME)"` (→ `Chorder`) and `PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.chorder.mac-os`
 
 macOS treats different bundle IDs as different apps. That gives local and production builds separate Accessibility and Input Monitoring permissions, separate sandbox containers (preferences, chord config), and separate Launch at Login entries.
 
@@ -79,25 +79,25 @@ macOS treats different bundle IDs as different apps. That gives local and produc
 
 Debug-only Info.plist keys in the same Debug build configuration:
 
-- `INFOPLIST_KEY_CFBundleDisplayName = "Software Chording Keyboard (Local)"`
-- `INFOPLIST_KEY_CFBundleName = "Software Chording Keyboard Local"`
+- `INFOPLIST_KEY_CFBundleDisplayName = "Chorder (Local)"`
+- `INFOPLIST_KEY_CFBundleName = "Chorder Local"`
 - `INFOPLIST_KEY_NSAccessibilityUsageDescription` and `INFOPLIST_KEY_NSInputMonitoringUsageDescription` — local-specific permission prompt text
 
-Release builds inherit the defaults from `Software-Chording-Keyboard-Info.plist` and generated Info.plist keys.
+Release builds inherit the defaults from `Chorder-Info.plist` and generated Info.plist keys.
 
 **Menu build line (`local development` vs version)**
 
-`Software Chording Keyboard/Utils/Bundle+Version.swift` defines `menuBuildLabel`, which returns `"local development"` when `isLocalDevelopment` is true. That flag is `#if DEBUG` — true only in Debug builds, false in Release regardless of how the app was installed.
+`Chorder/Utils/Bundle+Version.swift` defines `menuBuildLabel`, which returns `"local development"` when `isLocalDevelopment` is true. That flag is `#if DEBUG` — true only in Debug builds, false in Release regardless of how the app was installed.
 
-`AppDelegate+StatusBar.openMenu()` uses `Bundle.main.menuBuildLabel` for the footer item (e.g. `Software Chording Keyboard local development` or `Software Chording Keyboard 1.0`).
+`AppDelegate+StatusBar.openMenu()` uses `Bundle.main.menuBuildLabel` for the footer item (e.g. `Chorder local development` or `Chorder 1.0`).
 
 **Debug logging**
 
-`Software Chording Keyboard/Models/Debug.swift` wraps `gDebugPrint` in `#if DEBUG` and only prints when the `G_DEBUG` launch argument is present (`isGDebugScheme`). Use the **G_DEBUG Software Chording Keyboard** scheme to see log output; the normal Debug scheme compiles logging support but stays quiet.
+`Chorder/Models/Debug.swift` wraps `gDebugPrint` in `#if DEBUG` and only prints when the `G_DEBUG` launch argument is present (`isGDebugScheme`). Use the **G_DEBUG Chorder** scheme to see log output; the normal Debug scheme compiles logging support but stays quiet.
 
-**G_DEBUG Software Chording Keyboard scheme**
+**G_DEBUG Chorder scheme**
 
-The **G_DEBUG Software Chording Keyboard** scheme is separate from the local/production split. It passes the `G_DEBUG` launch argument (see `Software Chording Keyboard.xcodeproj/xcshareddata/xcschemes/G_DEBUG Software Chording Keyboard.xcscheme`). `isGDebugScheme` in `Debug.swift` checks for that argument and, in `AppDelegate`, opens Preferences on launch. Both schemes still build the Debug configuration when you Run.
+The **G_DEBUG Chorder** scheme is separate from the local/production split. It passes the `G_DEBUG` launch argument (see `Chorder.xcodeproj/xcshareddata/xcschemes/G_DEBUG Chorder.xcscheme`). `isGDebugScheme` in `Debug.swift` checks for that argument and, in `AppDelegate`, opens Preferences on launch. Both schemes still build the Debug configuration when you Run.
 
 For local development, app sandboxing is typically disabled. Re-enable it before release builds.
 
@@ -113,12 +113,12 @@ The project uses [Xcode test plans](https://developer.apple.com/documentation/xc
 ### From Xcode
 
 1. Open the project in Xcode.
-2. Select the **Software Chording Keyboard** scheme.
+2. Select the **Chorder** scheme.
 3. Press `⌘U` to run the active test plan, or use **Product → Test**.
 
 To switch plans: **Product → Test Plan → UnitTests** or **AllTests**. You can also choose the plan in the Test navigator (⌘6).
 
-Unit tests live in **Software Chording KeyboardTests**. UI tests live in **Software Chording KeyboardUITests**.
+Unit tests live in **ChorderTests**. UI tests live in **ChorderUITests**.
 
 ### From the command line
 
@@ -126,7 +126,7 @@ Run the default unit test plan:
 
 ```bash
 xcodebuild test \
-  -scheme "Software Chording Keyboard" \
+  -scheme "Chorder" \
   -destination 'platform=macOS' \
   -testPlan UnitTests \
   CODE_SIGNING_ALLOWED=NO
@@ -136,7 +136,7 @@ Run all tests (unit + UI):
 
 ```bash
 xcodebuild test \
-  -scheme "Software Chording Keyboard" \
+  -scheme "Chorder" \
   -destination 'platform=macOS' \
   -testPlan AllTests \
   CODE_SIGNING_ALLOWED=NO
@@ -145,7 +145,7 @@ xcodebuild test \
 List available test plans:
 
 ```bash
-xcodebuild -scheme "Software Chording Keyboard" -showTestPlans
+xcodebuild -scheme "Chorder" -showTestPlans
 ```
 
 ## Permissions during development
@@ -156,11 +156,11 @@ The app needs **Accessibility** and **Input Monitoring** permissions to detect c
 
 1. Launch the app from Xcode.
 2. When prompted, grant permissions in the Preferences window, or go to **System Settings → Privacy & Security**.
-3. Enable the toggles for **Software Chording Keyboard (Local)** under both **Accessibility** and **Input Monitoring** (not the production **Software Chording Keyboard** entries).
+3. Enable the toggles for **Chorder (Local)** under both **Accessibility** and **Input Monitoring** (not the production **Chorder** entries).
 
 ### Tips when permission does not work
 
-**Enable the correct entries.** When running from Xcode, grant permission to **Software Chording Keyboard (Local)**. The App Store build (**Software Chording Keyboard**) is a separate entry and permission on one does not apply to the other.
+**Enable the correct entries.** When running from Xcode, grant permission to **Chorder (Local)**. The App Store build (**Chorder**) is a separate entry and permission on one does not apply to the other.
 
 **Restart the app after changing permission.** Quit completely (menu bar → Quit, or stop the run in Xcode) and launch again so macOS applies the new setting.
 
@@ -170,12 +170,12 @@ The app needs **Accessibility** and **Input Monitoring** permissions to detect c
 
 ```bash
 # Local development build (Xcode Run)
-tccutil reset Accessibility uk.co.georgegillams.software-chording-keyboard.mac-os.local
-tccutil reset ListenEvent uk.co.georgegillams.software-chording-keyboard.mac-os.local
+tccutil reset Accessibility uk.co.georgegillams.chorder.mac-os.local
+tccutil reset ListenEvent uk.co.georgegillams.chorder.mac-os.local
 
 # App Store / production build
-tccutil reset Accessibility uk.co.georgegillams.software-chording-keyboard.mac-os
-tccutil reset ListenEvent uk.co.georgegillams.software-chording-keyboard.mac-os
+tccutil reset Accessibility uk.co.georgegillams.chorder.mac-os
+tccutil reset ListenEvent uk.co.georgegillams.chorder.mac-os
 ```
 
 Then rebuild, run, and grant permission again through Preferences or System Settings.

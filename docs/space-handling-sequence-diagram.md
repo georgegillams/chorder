@@ -403,4 +403,4 @@ flowchart TD
 - [`Chord.swift`](../Software%20Chording%20Keyboard/Models/Chord.swift) — `ChordSpaceBeforeOutputMode`, `resolveReplacement`, `spaceBeforeOutputCorrection`
 - [`TextReplacer.swift`](../Software%20Chording%20Keyboard/Services/TextReplacer.swift) — `insertOwedSpaceBefore`, `replaceViaSyntheticKeys`
 - [`Constants.swift`](../Software%20Chording%20Keyboard/Constants/Constants.swift) — `skipPrecedingSpaceCharacters`
-- [`Software_Chording_KeyboardTests.swift`](../Software%20Chording%20KeyboardTests/Software_Chording_KeyboardTests.swift) — `testKeyboardInputEngineOwedSpaceKeyDownSchedulesEchoesBeforeAccumulatingKeys`, `testSpaceBeforeOutputCorrectionMatrix`, `testResolveReplacementPrependsSpaceWhenNeeded`
+- [`ChorderTests.swift`](../Software%20Chording%20KeyboardTests/ChorderTests.swift) — `testKeyboardInputEngineOwedSpaceKeyDownSchedulesEchoesBeforeAccumulatingKeys`, `testSpaceBeforeOutputCorrectionMatrix`, `testResolveReplacementPrependsSpaceWhenNeeded`

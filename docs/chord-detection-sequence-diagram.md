@@ -292,4 +292,4 @@ sequenceDiagram
 - [`TextReplacer.swift`](../Software%20Chording%20Keyboard/Services/TextReplacer.swift) — `replaceViaSyntheticKeys`, `replaceViaAccessibility`
 - [`AppSettings.swift`](../Software%20Chording%20Keyboard/Models/AppSettings.swift) — `recalculateAlphabeticalMapping`, `alphabeticalInputOutputMappingDictionary`
 - [`AppDelegate.swift`](../Software%20Chording%20Keyboard/AppDelegate.swift) — global monitor registration
-- [`Software_Chording_KeyboardTests.swift`](../Software%20Chording%20KeyboardTests/Software_Chording_KeyboardTests.swift) — `testChordDetectionFiresAfterHoldWhenStable`, `testChordDetectionFiresShorterChordImmediatelyWhenLongerAlsoConfigured`, `testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes`
+- [`ChorderTests.swift`](../Software%20Chording%20KeyboardTests/ChorderTests.swift) — `testChordDetectionFiresAfterHoldWhenStable`, `testChordDetectionFiresShorterChordImmediatelyWhenLongerAlsoConfigured`, `testChordDetectionDoesNotFireWhenKeysChangeBeforeHoldCompletes`
