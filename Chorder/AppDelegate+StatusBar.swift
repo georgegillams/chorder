@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import ChorderCore
 import SwiftUI
 
 extension AppDelegate {

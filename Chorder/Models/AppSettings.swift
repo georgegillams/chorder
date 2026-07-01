@@ -5,6 +5,7 @@
 //  Created by George Gillams on 05/04/2023.
 //
 
+import ChorderCore
 import Foundation
 import SwiftUI
 
@@ -35,6 +36,15 @@ class AppSettings: ObservableObject {
     }
     @Published public var useAccessibilityAPI: Bool {
         didSet {
+            writeAppSettingsToFile()
+        }
+    }
+    @Published public var inputMechanism: InputMechanism {
+        didSet {
+            if !InputMechanism.isLegacyAvailable, inputMechanism == .legacyGlobalMonitoring {
+                inputMechanism = .inputMethod
+                return
+            }
             writeAppSettingsToFile()
         }
     }
@@ -103,6 +113,7 @@ class AppSettings: ObservableObject {
         millisecondsToHoldStr = "100ms"
         millisecondsToHold = 100
         useAccessibilityAPI = true
+        inputMechanism = InputMechanism.defaultForCurrentBuild
         // end of default values
 
         machineIdentifier = MachineIdentifier.current
@@ -254,6 +265,12 @@ class AppSettings: ObservableObject {
                 millisecondsToHold = parsed
             }
             useAccessibilityAPI = serialisableSettings.useAccessibilityAPI ?? true
+            if let mechanismRaw = serialisableSettings.inputMechanism,
+               let mechanism = InputMechanism(rawValue: mechanismRaw) {
+                inputMechanism = InputMechanism.isLegacyAvailable || mechanism == .inputMethod
+                    ? mechanism
+                    : .inputMethod
+            }
             chords = deserialiseChords(serialisableChords: serialisableSettings.chords)
         } catch {
             gDebugPrint("Error deserialising data \(error)")
@@ -311,6 +328,7 @@ class AppSettings: ObservableObject {
             migrationVersion: migrationVersion,
             millisecondsToHold: millisecondsToHoldStr,
             useAccessibilityAPI: useAccessibilityAPI,
+            inputMechanism: inputMechanism.rawValue,
             chords: serialiseChords(chords: chords)
         )
 
@@ -337,6 +355,7 @@ class AppSettings: ObservableObject {
             try jsonString.write(to: settingsFileLocation,
                                  atomically: true,
                                  encoding: .utf8)
+            syncSettingsToAppGroup(jsonString)
             clearDirty()
         } catch {
             gDebugPrint("ERROR \(error)")
@@ -368,6 +387,8 @@ class AppSettings: ObservableObject {
         if settingsFileChanged {
             setMigrationVersion(SettingsMigration.currentMigrationVersion)
             writeAppSettingsToFile()
+        } else {
+            syncSettingsToAppGroup(getSettingsJsonString())
         }
         clearDirty()
     }
@@ -461,12 +482,17 @@ class AppSettings: ObservableObject {
             directoryUrl.stopAccessingSecurityScopedResource()
         }
     }
+
+    private func syncSettingsToAppGroup(_ json: String) {
+        _ = SharedSettingsStore.syncSettingsJSON(json)
+    }
 }
 
 struct SerialisableAppSettings: Codable {
     var migrationVersion: Int?
     var millisecondsToHold: String
-    var useAccessibilityAPI: Bool?  // optional so existing settings files without the key default to true
+    var useAccessibilityAPI: Bool?
+    var inputMechanism: String?
     var chords: [SerialisableChord]
 }
 

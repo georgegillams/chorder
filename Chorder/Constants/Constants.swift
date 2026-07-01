@@ -2,23 +2,17 @@
 //  Constants.swift
 //  Chorder
 //
-//  Created by George Gillams on 10/04/2023.
-//
 
 import Cocoa
+import ChorderCore
 import Foundation
 import AppKit
 import SwiftUI
 
-/// Runtime shift-toggle state applied when a chord fires.
-/// Per-chord output casing defaults use `ChordCapitalisationMode` instead.
-enum CapitalisationMode {
-    case off, singleCharacter, fullCapitalisation
-}
+@_exported import enum ChorderCore.CapitalisationMode
 
 // Bundle identifiers of apps whose kAXSelectedTextAttribute write implementation is known to be
 // broken — the write returns success but silently discards the output and corrupts the field.
-// Apps in this set are skipped by the AX replacement path and handled by the CGEvent fallback.
 let axIncompatibleAppBundleIDs: Set<String> = [
     "org.mozilla.firefox",
     "org.mozilla.nightly",
@@ -26,19 +20,19 @@ let axIncompatibleAppBundleIDs: Set<String> = [
 ]
 
 class KeyboardConstants {
-    static let spaceEventKey = 49
+    static let spaceEventKey = SharedKeyboardConstants.spaceEventKey
     static let spaceKeyCode = CGKeyCode(spaceEventKey)
-    static let tabEventKey = 48
+    static let tabEventKey = SharedKeyboardConstants.tabEventKey
     static let tabKeyCode = CGKeyCode(tabEventKey)
-    static let backspaceEventKey = 51
+    static let backspaceEventKey = SharedKeyboardConstants.backspaceEventKey
     static let backspaceKeyCode = CGKeyCode(backspaceEventKey)
-    static let escapeEventKey = 53
+    static let escapeEventKey = SharedKeyboardConstants.escapeEventKey
     static let escapeKeyCode = CGKeyCode(escapeEventKey)
-    static let leftEventKey = 123
+    static let leftEventKey = SharedKeyboardConstants.leftEventKey
     static let leftKeyCode = CGKeyCode(leftEventKey)
-    static let rightEventKey = 124
+    static let rightEventKey = SharedKeyboardConstants.rightEventKey
     static let rightKeyCode = CGKeyCode(rightEventKey)
-    static let returnEventKey = 36
+    static let returnEventKey = SharedKeyboardConstants.returnEventKey
     static let returnKeyCode = CGKeyCode(returnEventKey)
     static let fullStopEventKey = 47
     static let fullStopKeyCode = CGKeyCode(fullStopEventKey)
@@ -46,5 +40,5 @@ class KeyboardConstants {
     static let shiftKeyCode = CGKeyCode(shiftEventKey)
     static let deleteEventKey = 127
     static let deleteKeyCode = CGKeyCode(deleteEventKey)
-    static let skipPrecedingSpaceCharacters = ["!", "@", "%", "*", ")", "}", "]", "_", "-", "=", "+", "`", "~", "|", "\\", "/", ":", ";", ">", "?", ",", ".", "&", "#"]
+    static let skipPrecedingSpaceCharacters = SharedKeyboardConstants.skipPrecedingSpaceCharacters
 }

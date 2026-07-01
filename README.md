@@ -4,9 +4,13 @@ A macOS app that turns any ordinary keyboard into a chording keyboard — no ded
 
 ## How it works
 
-The app listens to keypresses globally. When it detects a chord (multiple keys held together), it deletes the typed characters and inserts the chord's configured output.
+Chorder detects simultaneous key holds and replaces the typed characters with configured chord output.
 
-For example, pressing `t` and `h` together matches the chord `th` → `the`. The app sends backspace events to remove `th` (or `ht`), then types `the`.
+**Input method mode (default for App Store builds):** Chorder is a macOS input method. Add and select **Chorder** in **System Settings → Keyboard → Input Sources**, then type with Chorder as your active input source. No Accessibility or Input Monitoring permissions are required.
+
+**Global monitoring mode (Debug / non–App Store only):** The legacy path listens globally while any keyboard layout is active. It requires **Input Monitoring** and **Accessibility** (or falls back to synthetic keystrokes). Choose this in **Preferences → Settings → Keyboard input** when running a local Debug build.
+
+For example, pressing `t` and `h` together matches the chord `th` → `the`.
 
 Chords can include:
 
@@ -18,7 +22,8 @@ Chords can include:
 
 - macOS 13 or later
 - Xcode 15 or later (for building and running tests)
-- Accessibility and Input Monitoring permissions (granted on first launch)
+- **Input method mode:** Chorder enabled as an input source (no special privacy permissions)
+- **Global monitoring mode (Debug only):** Accessibility and Input Monitoring permissions
 
 ## Running locally
 
@@ -57,8 +62,9 @@ When you **Run** from Xcode, the app uses the **Debug** build configuration. Whe
 | Bundle identifier             | `uk.co.georgegillams.chorder.mac-os.local`  | `uk.co.georgegillams.chorder.mac-os`    |
 | Display name                  | `Chorder (Local)`                           | `Chorder`                               |
 | Menu build line               | `Chorder local development`                 | `Chorder {version}` (marketing version) |
-| Accessibility entry           | **Chorder (Local)**                         | **Chorder**                             |
-| Input Monitoring entry        | **Chorder (Local)**                         | **Chorder**                             |
+| Input mechanism default   | Global monitoring (legacy)                  | Input method (IMK)                      |
+| Legacy mode available     | Yes (Settings toggle)                       | No (App Store sandbox)                  |
+| Privacy permissions       | Input Monitoring + Accessibility if legacy  | None                                    |
 | Debug logging (`gDebugPrint`) | Enabled when running the **G_DEBUG** scheme | Compiled out                            |
 | Sandbox / app data            | Separate container                          | App Store container                     |
 
@@ -83,7 +89,11 @@ Debug-only Info.plist keys in the same Debug build configuration:
 - `INFOPLIST_KEY_CFBundleName = "Chorder Local"`
 - `INFOPLIST_KEY_NSAccessibilityUsageDescription` and `INFOPLIST_KEY_NSInputMonitoringUsageDescription` — local-specific permission prompt text
 
-Release builds inherit the defaults from `Chorder-Info.plist` and generated Info.plist keys.
+Release builds inherit an empty `Chorder-Info.plist` (no Accessibility/Input Monitoring usage strings). The shipping app uses **Input Method Kit** only.
+
+**Input method bundle**
+
+The `ChorderInputMethod` target builds `ChorderInputMethod.app`, embedded in the app at `Contents/Library/Input Methods/` and copied to `~/Library/Input Methods/` on first use. Chord settings sync to the input method via the App Group `group.uk.co.georgegillams.chorder`.
 
 **Menu build line (`local development` vs version)**
 
@@ -150,7 +160,17 @@ xcodebuild -scheme "Chorder" -showTestPlans
 
 ## Permissions during development
 
-The app needs **Accessibility** and **Input Monitoring** permissions to detect chords and type output. Local and production builds require **separate** permission grants because they use different bundle identifiers (see above).
+### Input method mode
+
+1. Open **Preferences → Settings**.
+2. Ensure **Keyboard input** is set to **Input method (recommended)**.
+3. Click **Install input method**, then **Enable Chorder** (approve in Privacy & Security if macOS prompts).
+4. Click **Select Chorder**, or add it in **Keyboard → Input Sources** if needed.
+4. Select **Chorder** from the menu bar input menu while typing.
+
+### Global monitoring mode (Debug builds only)
+
+The app needs **Accessibility** and **Input Monitoring** when using legacy global monitoring.
 
 ### Granting permission
 

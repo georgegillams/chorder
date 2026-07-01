@@ -36,6 +36,24 @@
 		PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00042DA6B2D200B360B1 /* PracticeView.swift */; };
 		PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */; };
 		STCA00032DA6B2D200B360B1 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STCA00042DA6B2D200B360B1 /* StatsView.swift */; };
+		IMKCHORDUI02 /* Chord+UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKCHORDUI01 /* Chord+UI.swift */; };
+		IMKLEGTO02 /* LegacyTextOutputter.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKLEGTO01 /* LegacyTextOutputter.swift */; };
+		IMKREG02 /* AppSettingsChordRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKREG01 /* AppSettingsChordRegistry.swift */; };
+		IMKINST02 /* InputMethodInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKINST01 /* InputMethodInstaller.swift */; };
+		IMKNOTIF02 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKNOTIF01 /* Notifications.swift */; };
+		IMKMAIN02 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKMAIN01 /* main.swift */; };
+		IMKCTRL02 /* ChorderInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKCTRL01 /* ChorderInputController.swift */; };
+		IMKINS02 /* IMKTextInserter.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKINS01 /* IMKTextInserter.swift */; };
+		IMKSESS02 /* IMKChordSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKSESS01 /* IMKChordSession.swift */; };
+		IMKSHREG02 /* SharedSettingsChordRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMKSHREG01 /* SharedSettingsChordRegistry.swift */; };
+		7808C0CC3FAC44C7BB47FD23 /* ChorderCore in Frameworks */ = {isa = PBXBuildFile; productRef = FE55E07000D54760A95117B2 /* ChorderCore */; };
+		7DE95F9292FE4466B8161D5E /* ChorderCore in Frameworks */ = {isa = PBXBuildFile; productRef = ED15EA9C89114620B96949F9 /* ChorderCore */; };
+		58114FF6483847BB8FE49980 /* ChorderCore in Frameworks */ = {isa = PBXBuildFile; productRef = 329EC5CBDAD147039B55B8E5 /* ChorderCore */; };
+		B15B9CBD925348FA9750EB55 /* InputMethodKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1BC248AA9942E3AACB5C6D /* InputMethodKit.framework */; };
+		E83AE6D567AB4C13B1C2F755 /* ChorderInputMethod.app in Copy Files */ = {isa = PBXBuildFile; fileRef = 6D9353EBDC554ECAAB6FE504 /* ChorderInputMethod.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy); }; };
+		IMKICON02 /* ChorderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = IMKICON01 /* ChorderIcon.png */; };
+		IMKICON03 /* ChorderIcon.tiff in Resources */ = {isa = PBXBuildFile; fileRef = IMKICON04 /* ChorderIcon.tiff */; };
+		IMKSTR02 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = IMKSTR01 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +70,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 08E19EED29DE19F80081AB4E;
 			remoteInfo = "Chorder";
+		};
+		8A97599C51994ACDB4B07CA5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08E19EE629DE19F80081AB4E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B483BC58668845F9894CC328;
+			remoteInfo = ChorderInputMethod;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -92,6 +117,23 @@
 		STCA00042DA6B2D200B360B1 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		TPLN000229DE19F90081AB4E /* AllTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllTests.xctestplan; sourceTree = "<group>"; };
 		TPLN000129DE19F90081AB4E /* UnitTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = UnitTests.xctestplan; sourceTree = "<group>"; };
+		IMKCHORDUI01 /* Chord+UI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chord+UI.swift"; sourceTree = "<group>"; };
+		IMKLEGTO01 /* LegacyTextOutputter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyTextOutputter.swift; sourceTree = "<group>"; };
+		IMKREG01 /* AppSettingsChordRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsChordRegistry.swift; sourceTree = "<group>"; };
+		IMKINST01 /* InputMethodInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputMethodInstaller.swift; sourceTree = "<group>"; };
+		IMKNOTIF01 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		IMKMAIN01 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		IMKCTRL01 /* ChorderInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorderInputController.swift; sourceTree = "<group>"; };
+		IMKINS01 /* IMKTextInserter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMKTextInserter.swift; sourceTree = "<group>"; };
+		IMKSESS01 /* IMKChordSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMKChordSession.swift; sourceTree = "<group>"; };
+		IMKSHREG01 /* SharedSettingsChordRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSettingsChordRegistry.swift; sourceTree = "<group>"; };
+		DF1BC248AA9942E3AACB5C6D /* InputMethodKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = InputMethodKit.framework; path = System/Library/Frameworks/InputMethodKit.framework; sourceTree = SDKROOT; };
+		IMKPLIST01 /* ChorderInputMethod-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ChorderInputMethod-Info.plist"; sourceTree = "<group>"; };
+		IMKENT01 /* ChorderInputMethod.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChorderInputMethod.entitlements; sourceTree = "<group>"; };
+		6D9353EBDC554ECAAB6FE504 /* ChorderInputMethod.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChorderInputMethod.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		IMKICON01 /* ChorderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ChorderIcon.png; sourceTree = "<group>"; };
+		IMKICON04 /* ChorderIcon.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = ChorderIcon.tiff; sourceTree = "<group>"; };
+		IMKSTR01 /* InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +141,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7808C0CC3FAC44C7BB47FD23 /* ChorderCore in Frameworks */,
 				0898B41B2BE16DBA0087D747 /* LaunchAtLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -107,6 +150,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DE95F9292FE4466B8161D5E /* ChorderCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +175,8 @@
 		08E19EE529DE19F80081AB4E = {
 			isa = PBXGroup;
 			children = (
+				IMKGRP01 /* ChorderInputMethod */,
+				PKGGRP01 /* ChorderCore */,
 				08E19EF029DE19F80081AB4E /* Chorder */,
 				08E19F0229DE19F90081AB4E /* ChorderTests */,
 				08E19F0C29DE19F90081AB4E /* ChorderUITests */,
@@ -143,6 +189,7 @@
 			isa = PBXGroup;
 			children = (
 				08E19EEE29DE19F80081AB4E /* Chorder.app */,
+				6D9353EBDC554ECAAB6FE504 /* ChorderInputMethod.app */,
 				08E19EFF29DE19F90081AB4E /* ChorderTests.xctest */,
 				08E19F0929DE19F90081AB4E /* ChorderUITests.xctest */,
 			);
@@ -174,6 +221,9 @@
 				F1A2B3C5062DA6B2D200B360A6 /* TextReplacer.swift */,
 				A2B3C4D7092DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift */,
 				PRCA00062DA6B2D200B360B1 /* PracticeChordMonitor.swift */,
+				IMKLEGTO01 /* LegacyTextOutputter.swift */,
+				IMKREG01 /* AppSettingsChordRegistry.swift */,
+				IMKINST01 /* InputMethodInstaller.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -218,14 +268,13 @@
 			children = (
 				0881F2C22DA6772600EE61A1 /* Debug.swift */,
 				086E69CB2DA5B2D200B360A1 /* AppSettings.swift */,
-				08E19F2029DE1A950081AB4E /* Chord.swift */,
+								IMKCHORDUI01 /* Chord+UI.swift */,
+				IMKNOTIF01 /* Notifications.swift */,
 				08E19F2729DF11FC0081AB4E /* AppModel.swift */,
 				08EE66FF29E9584000F4A6E5 /* BookMarks.swift */,
-				A1B2C3D32DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift */,
 				B2C3D4E52DA6B2D200B360A2 /* MachineIdentifier.swift */,
 				C3D4E5F62DA6B2D200B360A3 /* ChordUsageStats.swift */,
 				D4E5F672DA6B2D200B360A4 /* SettingsMigration.swift */,
-				E5F697A72DA6B2D200B360A5 /* ChordDetectionState.swift */,
 				PRCA00022DA6B2D200B360B1 /* ChordPracticeSelection.swift */,
 			);
 			path = Models;
@@ -250,6 +299,47 @@
 			path = TestPlans;
 			sourceTree = "<group>";
 		};
+		PKGGRP01 /* ChorderCore */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = ChorderCore;
+			path = ChorderCore;
+			sourceTree = "<group>";
+		};
+		IMKGRP01 /* ChorderInputMethod */ = {
+			isa = PBXGroup;
+			children = (
+				IMKMAIN01 /* main.swift */,
+				IMKCTRL01 /* ChorderInputController.swift */,
+				IMKINS01 /* IMKTextInserter.swift */,
+				IMKSESS01 /* IMKChordSession.swift */,
+				IMKSHREG01 /* SharedSettingsChordRegistry.swift */,
+				IMKPLIST01 /* ChorderInputMethod-Info.plist */,
+				IMKENT01 /* ChorderInputMethod.entitlements */,
+				IMKRESGRP01 /* Resources */,
+				IMKL10NGRP01 /* en.lproj */,
+			);
+			path = ChorderInputMethod;
+			sourceTree = "<group>";
+		};
+		IMKRESGRP01 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				IMKICON01 /* ChorderIcon.png */,
+				IMKICON04 /* ChorderIcon.tiff */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		IMKL10NGRP01 /* en.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				IMKSTR01 /* InfoPlist.strings */,
+			);
+			path = en.lproj;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -260,13 +350,16 @@
 				08E19EEA29DE19F80081AB4E /* Sources */,
 				08E19EEB29DE19F80081AB4E /* Frameworks */,
 				08E19EEC29DE19F80081AB4E /* Resources */,
+				64471C73559342099CB2A133 /* Copy Files */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EFC621EBCED44F6284D26265 /* PBXTargetDependency */,
 			);
 			name = "Chorder";
 			packageProductDependencies = (
+				FE55E07000D54760A95117B2 /* ChorderCore */,
 				0898B41A2BE16DBA0087D747 /* LaunchAtLogin */,
 			);
 			productName = "Chorder";
@@ -287,6 +380,9 @@
 				08E19F0129DE19F90081AB4E /* PBXTargetDependency */,
 			);
 			name = "ChorderTests";
+			packageProductDependencies = (
+				ED15EA9C89114620B96949F9 /* ChorderCore */,
+			);
 			productName = "ChorderTests";
 			productReference = 08E19EFF29DE19F90081AB4E /* ChorderTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -308,6 +404,26 @@
 			productName = "ChorderUITests";
 			productReference = 08E19F0929DE19F90081AB4E /* ChorderUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		B483BC58668845F9894CC328 /* ChorderInputMethod */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB5E2F7BF416462BA1C2D363 /* Build configuration list for PBXNativeTarget "ChorderInputMethod" */;
+			buildPhases = (
+				1C6F0BE5A58045B98F13B5D0 /* Sources */,
+				56D4CD1D68494D058F8AB9C9 /* Frameworks */,
+				30E566A6B37F44259312073F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChorderInputMethod;
+			packageProductDependencies = (
+				329EC5CBDAD147039B55B8E5 /* ChorderCore */,
+			);
+			productName = ChorderInputMethod;
+			productReference = 6D9353EBDC554ECAAB6FE504 /* ChorderInputMethod.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -342,6 +458,7 @@
 			);
 			mainGroup = 08E19EE529DE19F80081AB4E;
 			packageReferences = (
+				D834ED697BD9427283B0EA1E /* XCLocalSwiftPackageReference "ChorderCore" */,
 				0898B4192BE16D140087D747 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
 			);
 			productRefGroup = 08E19EEF29DE19F80081AB4E /* Products */;
@@ -349,6 +466,7 @@
 			projectRoot = "";
 			targets = (
 				08E19EED29DE19F80081AB4E /* Chorder */,
+				B483BC58668845F9894CC328 /* ChorderInputMethod */,
 				08E19EFE29DE19F90081AB4E /* ChorderTests */,
 				08E19F0829DE19F90081AB4E /* ChorderUITests */,
 			);
@@ -379,6 +497,47 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		64471C73559342099CB2A133 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "Contents/Library/Input Methods";
+			dstSubfolderSpec = 1;
+			files = (
+				E83AE6D567AB4C13B1C2F755 /* ChorderInputMethod.app in Copy Files */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1C6F0BE5A58045B98F13B5D0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				IMKMAIN02 /* main.swift in Sources */,
+				IMKCTRL02 /* ChorderInputController.swift in Sources */,
+				IMKINS02 /* IMKTextInserter.swift in Sources */,
+				IMKSESS02 /* IMKChordSession.swift in Sources */,
+				IMKSHREG02 /* SharedSettingsChordRegistry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		56D4CD1D68494D058F8AB9C9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				58114FF6483847BB8FE49980 /* ChorderCore in Frameworks */,
+				B15B9CBD925348FA9750EB55 /* InputMethodKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		30E566A6B37F44259312073F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				IMKICON02 /* ChorderIcon.png in Resources */,
+				IMKICON03 /* ChorderIcon.tiff in Resources */,
+				IMKSTR02 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -391,15 +550,12 @@
 				08REF00329F0000100A1B2C /* Bundle+Version.swift in Sources */,
 				08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */,
 				08EE670029E9584000F4A6E5 /* BookMarks.swift in Sources */,
-				08E19F2129DE1A950081AB4E /* Chord.swift in Sources */,
 				08E19F2429DE1CAD0081AB4E /* Settings.swift in Sources */,
 				086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */,
 				081B0B0929E431550052A0BD /* Constants.swift in Sources */,
-				A1B2C3D42DA6B2D200B360A1 /* OutputPlaceholderExpansion.swift in Sources */,
 				B2C3D4E62DA6B2D200B360A2 /* MachineIdentifier.swift in Sources */,
 				C3D4E5F72DA6B2D200B360A3 /* ChordUsageStats.swift in Sources */,
 				D4E5F682DA6B2D200B360A4 /* SettingsMigration.swift in Sources */,
-				E5F697A82DA6B2D200B360A5 /* ChordDetectionState.swift in Sources */,
 				F1A2B3C5032DA6B2D200B360A6 /* PermissionCoordinator.swift in Sources */,
 				F1A2B3C5052DA6B2D200B360A6 /* TextReplacer.swift in Sources */,
 				A2B3C4D7082DA6B2D200B360A9 /* AccessibilityReplacementVerification.swift in Sources */,
@@ -409,6 +565,11 @@
 				PRCA00032DA6B2D200B360B1 /* PracticeView.swift in Sources */,
 				PRCA00052DA6B2D200B360B1 /* PracticeChordMonitor.swift in Sources */,
 				STCA00032DA6B2D200B360B1 /* StatsView.swift in Sources */,
+				IMKCHORDUI02 /* Chord+UI.swift in Sources */,
+				IMKLEGTO02 /* LegacyTextOutputter.swift in Sources */,
+				IMKREG02 /* AppSettingsChordRegistry.swift in Sources */,
+				IMKINST02 /* InputMethodInstaller.swift in Sources */,
+				IMKNOTIF02 /* Notifications.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -441,6 +602,11 @@
 			isa = PBXTargetDependency;
 			target = 08E19EED29DE19F80081AB4E /* Chorder */;
 			targetProxy = 08E19F0A29DE19F90081AB4E /* PBXContainerItemProxy */;
+		};
+		EFC621EBCED44F6284D26265 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B483BC58668845F9894CC328 /* ChorderInputMethod */;
+			targetProxy = 8A97599C51994ACDB4B07CA5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -709,6 +875,58 @@
 			};
 			name = Release;
 		};
+		0B608237E4C2462FA10DE41E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ChorderInputMethod/ChorderInputMethod.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F2NH4J9NYG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChorderInputMethod/ChorderInputMethod-Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.inputmethod.chorder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				WRAPPER_EXTENSION = app;
+
+			};
+			name = Debug;
+		};
+		78EDA8A967B244C0A4CE8998 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ChorderInputMethod/ChorderInputMethod.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F2NH4J9NYG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChorderInputMethod/ChorderInputMethod-Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.georgegillams.inputmethod.chorder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				WRAPPER_EXTENSION = app;
+
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -748,6 +966,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		FB5E2F7BF416462BA1C2D363 /* Build configuration list for PBXNativeTarget "ChorderInputMethod" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B608237E4C2462FA10DE41E /* Debug */,
+				78EDA8A967B244C0A4CE8998 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -761,11 +988,33 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		D834ED697BD9427283B0EA1E /* XCLocalSwiftPackageReference "ChorderCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ChorderCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		0898B41A2BE16DBA0087D747 /* LaunchAtLogin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0898B4192BE16D140087D747 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
 			productName = LaunchAtLogin;
+		};
+		FE55E07000D54760A95117B2 /* ChorderCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D834ED697BD9427283B0EA1E /* XCLocalSwiftPackageReference "ChorderCore" */;
+			productName = ChorderCore;
+		};
+		ED15EA9C89114620B96949F9 /* ChorderCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D834ED697BD9427283B0EA1E /* XCLocalSwiftPackageReference "ChorderCore" */;
+			productName = ChorderCore;
+		};
+		329EC5CBDAD147039B55B8E5 /* ChorderCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D834ED697BD9427283B0EA1E /* XCLocalSwiftPackageReference "ChorderCore" */;
+			productName = ChorderCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

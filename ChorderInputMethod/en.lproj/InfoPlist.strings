@@ -1,0 +1,4 @@
+/* Localized input method name shown in Keyboard settings */
+"uk.co.georgegillams.inputmethod.chorder.latin" = "Chorder";
+CFBundleDisplayName = "Chorder";
+CFBundleName = "Chorder";

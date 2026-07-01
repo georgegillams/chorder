@@ -2,9 +2,5 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
-		<key>NSAccessibilityUsageDescription</key>
-		<string>Accessibility permissions are used to type chords out in full.</string>
-		<key>NSInputMonitoringUsageDescription</key>
-		<string>Input monitoring permissions are used to detect chord key combinations.</string>
 	</dict>
 </plist>

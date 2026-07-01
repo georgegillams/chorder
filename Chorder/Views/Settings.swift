@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import ChorderCore
 import SwiftUI
 import LaunchAtLogin
 
@@ -447,6 +448,7 @@ struct SettingsView: View {
     @State private var showDeleteChordsConfirmation = false
     @State private var showChordInputConflictConfirmation = false
     @State private var conflictingChordForSave: Chord?
+    @State private var inputMethodStatus: InputMethodInstallStatus = .notInstalled
     private let openCreateChordOnAppear: Bool
 
     init(appModel: AppModel, settingsActions: SettingsActions, openCreateChordOnAppear: Bool = false) {
@@ -467,6 +469,22 @@ struct SettingsView: View {
             get: { appModel.appSettings.useAccessibilityAPI },
             set: { appModel.appSettings.useAccessibilityAPI = $0 }
         )
+    }
+
+    private var inputMechanismBinding: Binding<InputMechanism> {
+        Binding(
+            get: { appModel.appSettings.inputMechanism },
+            set: { newValue in
+                appModel.appSettings.inputMechanism = newValue
+                NotificationCenter.default.post(name: .chorderInputMechanismDidChange, object: nil)
+            }
+        )
+    }
+
+    private var availableInputMechanisms: [InputMechanism] {
+        InputMechanism.isLegacyAvailable
+            ? InputMechanism.allCases
+            : [.inputMethod]
     }
 
     // Computed property to check if custom sorting is active
@@ -1037,7 +1055,7 @@ struct SettingsView: View {
                 settingsRowLabel(
                     title: "Permissions",
                     hint: attributedHint(
-                        "The app needs Input Monitoring and Accessibility permissions to detect chords and type for you. Grant these in the Settings tab if prompted.",
+                        "Input method mode needs no special permissions. Legacy global monitoring needs Input Monitoring and Accessibility — grant these in the Settings tab if you use that mode.",
                         linkSettingsTab: true
                     )
                 )
@@ -1096,6 +1114,21 @@ struct SettingsView: View {
     private var generalSettingsPanel: some View {
         Form {
             Section {
+                Picker(selection: inputMechanismBinding) {
+                    ForEach(availableInputMechanisms) { mechanism in
+                        Text(mechanism.displayName).tag(mechanism)
+                    }
+                } label: {
+                    settingsRowLabel(
+                        title: "Keyboard input",
+                        hint: appModel.appSettings.inputMechanism.detailText
+                    )
+                }
+
+                if appModel.appSettings.inputMechanism == .inputMethod {
+                    inputMethodStatusSection
+                }
+
                 LabeledContent {
                     TextField("", text: millisecondsToHoldStrBinding)
                         .frame(width: 80)
@@ -1112,7 +1145,8 @@ struct SettingsView: View {
                         .font(.settingsHint)
                         .foregroundColor(.red)
                 }
-                if !Bundle.main.isAppSandboxed {
+                if appModel.appSettings.inputMechanism == .legacyGlobalMonitoring,
+                   !Bundle.main.isAppSandboxed {
                     Toggle(isOn: useAccessibilityAPIBinding) {
                         settingsRowLabel(
                             title: "Use Accessibility API for replacement",
@@ -1122,6 +1156,10 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("Input")
+            } footer: {
+                if !InputMechanism.isLegacyAvailable {
+                    Text("Global monitoring is not available in the App Store build. Use the input method mode.")
+                }
             }
 
             Section {
@@ -1164,37 +1202,93 @@ struct SettingsView: View {
                 Text("Configuration")
             }
 
+            if appModel.appSettings.inputMechanism == .legacyGlobalMonitoring {
+                Section {
+                    permissionRow(
+                        title: "Input monitoring",
+                        hasPermission: settingsActions.hasInputMonitoringPermission(),
+                        grantAction: {
+                            settingsActions.requestInputMonitoringPermission()
+                            settingsActions.openInputMonitoringSettings()
+                        },
+                        openSettingsAction: settingsActions.openInputMonitoringSettings
+                    )
 
-
-            Section {
-                permissionRow(
-                    title: "Input monitoring",
-                    hasPermission: settingsActions.hasInputMonitoringPermission(),
-                    grantAction: {
-                        settingsActions.requestInputMonitoringPermission()
-                        settingsActions.openInputMonitoringSettings()
-                    },
-                    openSettingsAction: settingsActions.openInputMonitoringSettings
-                )
-
-                permissionRow(
-                    title: "Accessibility",
-                    hasPermission: settingsActions.hasAccessibilityPermission(),
-                    grantAction: {
-                        settingsActions.requestAccessibilityPermission()
-                        settingsActions.openAccessibilitySettings()
-                    },
-                    openSettingsAction: settingsActions.openAccessibilitySettings
-                )
-            } header: {
-                Text("Permissions")
-                Text("For \(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "this app") to work, it needs permission to monitor your keyboard and type for you.")
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 4)
+                    permissionRow(
+                        title: "Accessibility",
+                        hasPermission: settingsActions.hasAccessibilityPermission(),
+                        grantAction: {
+                            settingsActions.requestAccessibilityPermission()
+                            settingsActions.openAccessibilitySettings()
+                        },
+                        openSettingsAction: settingsActions.openAccessibilitySettings
+                    )
+                } header: {
+                    Text("Permissions")
+                    Text("Legacy global monitoring needs permission to monitor your keyboard and type for you.")
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 4)
+                }
             }
         }
         .formStyle(.grouped)
         .navigationTitle("Settings")
+    }
+
+    private var inputMethodStatusSection: some View {
+        Group {
+            LabeledContent {
+                Text(inputMethodStatusLabel)
+                    .foregroundColor(inputMethodStatus == .active ? .green : .secondary)
+            } label: {
+                Text("Input method status")
+            }
+
+            Text(
+                "Click Install, then Enable Chorder. You can also use Select Chorder to switch without opening System Settings."
+            )
+            .font(.settingsHint)
+            .foregroundColor(.secondary)
+
+            HStack {
+                Button("Install input method") {
+                    _ = InputMethodInstaller.installFromAppBundleIfNeeded()
+                    refreshInputMethodStatus()
+                }
+                Button("Enable Chorder") {
+                    InputMethodInstaller.syncWithTextInputServices()
+                    InputMethodInstaller.openInstalledInputMethodForApproval()
+                    refreshInputMethodStatus()
+                }
+                Button("Open Keyboard Settings") {
+                    InputMethodInstaller.openKeyboardInputSourcesSettings()
+                }
+                Button("Select Chorder") {
+                    InputMethodInstaller.selectChorderInputSource()
+                    refreshInputMethodStatus()
+                }
+            }
+        }
+        .onAppear {
+            refreshInputMethodStatus()
+        }
+    }
+
+    private var inputMethodStatusLabel: String {
+        switch inputMethodStatus {
+        case .notInstalled:
+            return "Not installed"
+        case .installed:
+            return "Installed — enable in Keyboard settings"
+        case .enabled:
+            return "Enabled — select Chorder as your input source"
+        case .active:
+            return "Active"
+        }
+    }
+
+    private func refreshInputMethodStatus() {
+        inputMethodStatus = InputMethodInstaller.installStatus()
     }
 
     private func permissionRow(
