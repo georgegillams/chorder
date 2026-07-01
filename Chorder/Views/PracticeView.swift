@@ -3,6 +3,7 @@
 //  Chorder
 //
 
+import ChorderCore
 import SwiftUI
 
 private struct PracticeInputHint: View {

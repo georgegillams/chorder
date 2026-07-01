@@ -5,9 +5,10 @@
 //  Created by George Gillams on 05/04/2023.
 //
 
+import AppKit
+import ChorderCore
 import Cocoa
 import Foundation
-import AppKit
 import SwiftUI
 
 /*
@@ -87,6 +88,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var workspaceWakeObserver: NSObjectProtocol?
     private var globalEventMonitors: [Any] = []
     private var didShowGlobalMonitorFailureAlert = false
+    private var inputMechanismObserver: NSObjectProtocol?
 
     // MARK: - Permission Checking Methods
 
@@ -115,13 +117,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ChorderCoreLogging.log = { message in
+            gDebugPrint(message)
+        }
+
         updateActivationPolicy()
-
         keyboardEngine.delegate = self
-
-        permissionCoordinator.beginPermissionChecks()
         createStatusBarButton()
-        registerGlobalEventMonitors()
+        applyInputMechanism(appModel.appSettings.inputMechanism)
+
+        inputMechanismObserver = NotificationCenter.default.addObserver(
+            forName: .chorderInputMechanismDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.applyInputMechanism(self.appModel.appSettings.inputMechanism)
+        }
 
         if isGDebugScheme {
             showSettingsWindow()
@@ -130,7 +142,57 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         startSyncedStorageReloadSchedule()
     }
 
+    private func applyInputMechanism(_ mechanism: InputMechanism) {
+        unregisterGlobalEventMonitors()
+        permissionCoordinator.stopPermissionChecks()
+
+        switch mechanism {
+        case .legacyGlobalMonitoring:
+            permissionCoordinator.beginPermissionChecks(for: .legacyGlobalMonitoring)
+            registerGlobalEventMonitors()
+        case .inputMethod:
+            prepareInputMethodMode()
+        }
+    }
+
+    private func prepareInputMethodMode() {
+        _ = InputMethodInstaller.installFromAppBundleIfNeeded()
+        _ = SharedSettingsStore.syncSettingsJSON(appModel.appSettings.getSettingsJsonString())
+
+        if InputMethodInstaller.installStatus() != .active {
+            showInputMethodOnboardingIfNeeded()
+        }
+    }
+
+    private func showInputMethodOnboardingIfNeeded() {
+        let alert = NSAlert()
+        alert.messageText = "Enable Chorder input method"
+        alert.informativeText = """
+            Chorder works as a macOS input method. Click Enable Chorder in Chorder Settings, \
+            or add it in Keyboard → Input Sources. Then select Chorder from the input menu while typing.
+            """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open Keyboard Settings")
+        alert.addButton(withTitle: "Later")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            InputMethodInstaller.openKeyboardInputSourcesSettings()
+        }
+    }
+
+    private func unregisterGlobalEventMonitors() {
+        for monitor in globalEventMonitors {
+            NSEvent.removeMonitor(monitor)
+        }
+        globalEventMonitors = []
+        didShowGlobalMonitorFailureAlert = false
+    }
+
     private func registerGlobalEventMonitors() {
+        guard appModel.appSettings.inputMechanism == .legacyGlobalMonitoring else {
+            return
+        }
+
         let monitors: [Any?] = [
             NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
                 self?.keyboardEngine.handleFlagsChanged(event)
@@ -202,6 +264,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {
         stopSyncedStorageReloadSchedule()
+        unregisterGlobalEventMonitors()
+        if let inputMechanismObserver {
+            NotificationCenter.default.removeObserver(inputMechanismObserver)
+        }
         appModel.appSettings.flushPendingStatsIfNeeded()
         appModel.appSettings.closeSettingsFileAccess()
     }

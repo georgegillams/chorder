@@ -5,6 +5,7 @@
 //  Created by George Gillams on 05/06/2026.
 //
 
+import ChorderCore
 import Foundation
 
 enum SettingsMigration {

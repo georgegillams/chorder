@@ -4,10 +4,12 @@
 //
 
 import AppKit
+import ChorderCore
 import Foundation
 
 final class PermissionCoordinator {
     private let recheckInterval: TimeInterval = 10
+    private var isChecking = false
 
     func hasInputMonitoringPermission() -> Bool {
         if #available(macOS 10.15, *) {
@@ -47,12 +49,22 @@ final class PermissionCoordinator {
         NSWorkspace.shared.open(Bundle.main.feedbackURL)
     }
 
-    func beginPermissionChecks() {
+    func beginPermissionChecks(for mechanism: InputMechanism) {
+        guard mechanism == .legacyGlobalMonitoring else {
+            isChecking = false
+            return
+        }
+        isChecking = true
         checkNextPermission()
     }
 
-    // Recursively requests each permission, until all required permissions are available
+    func stopPermissionChecks() {
+        isChecking = false
+    }
+
     private func checkNextPermission() {
+        guard isChecking else { return }
+
         let hasInputMonitoringPermission = hasInputMonitoringPermission()
         gDebugPrint("Input monitoring access: \(hasInputMonitoringPermission)")
 

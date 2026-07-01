@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import ChorderCore
 import Combine
 import Foundation
 

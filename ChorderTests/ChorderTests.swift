@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import ChorderCore
 import XCTest
 @testable import Chorder
 
