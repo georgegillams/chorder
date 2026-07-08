@@ -184,8 +184,10 @@ Then rebuild, run, and grant permission again through Preferences or System Sett
 
 ## Release
 
-- Update version (marketing version) and build (needs incrementing). In XCode, click Contraster -> General -> Identity -> Version/Build
-- Take screenshots at 1280x800
+### App Store (App Store Connect)
+
+- Update version (marketing version) and build (needs incrementing). In Xcode: select **Chorder** target → **General** → **Identity** → **Version** / **Build**
+- Take screenshots at 1280×800
 - Clean
 - Create build online at https://appstoreconnect.apple.com/
 - Select non-debug scheme
@@ -195,3 +197,15 @@ Then rebuild, run, and grant permission again through Preferences or System Sett
 Release archives use `Chorder-Release.entitlements` (App Sandbox enabled, without `input-monitoring`). No manual entitlements changes are needed before upload.
 
 Note: If releasing for manual distribution, disable app sandboxing.
+
+### Manual distribution (GitHub Releases)
+
+1. In Xcode, select the **Chorder** scheme and **Any Mac (Mac Catalyst)** / **My Mac** as appropriate.
+1. Update **Version** / **Build** (see App Store steps above).
+1. Product → **Archive**.
+1. In the Organizer, select the archive → **Distribute App** → **Copy App** (or **Export**) and export `Chorder.app`.
+1. Zip the app for distribution (Finder: right click `Chorder.app` → **Compress**) and name it like `Chorder-<version>.zip`.
+1. In GitHub: go to the repo → **Releases** → **Draft a new release**.
+1. Choose a tag (create one if needed) like `v<version>`, set the release title, and write release notes.
+1. Under **Assets**, upload `Chorder-<version>.zip`.
+1. Click **Publish release**.
