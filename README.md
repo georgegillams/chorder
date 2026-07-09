@@ -2,6 +2,14 @@
 
 A macOS app that turns any ordinary keyboard into a chording keyboard — no dedicated hardware required.
 
+## Download
+
+1. Go to https://github.com/georgegillams/software-chording-keyboard/releases/
+1. Download and extract the latest zip
+1. Copy the app to `/Applications` and run it
+1. Look for the app in the status bar (keyboard icon)
+
+
 ## How it works
 
 The app listens to keypresses globally. When it detects a chord (multiple keys held together), it deletes the typed characters and inserts the chord's configured output.
