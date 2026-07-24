@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import components_swiftUI
 
 private struct StatsMetricCard: View {
     let title: String
@@ -16,23 +17,23 @@ private struct StatsMetricCard: View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: systemImage)
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.95))
-                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                .foregroundStyle(Semantic.Colors.textOnColor.opacity(0.95))
+                .shadow(color: Semantic.Colors.shadowColor, radius: 2, y: 1)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
                     .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Semantic.Colors.textOnColor)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
 
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.white.opacity(0.95))
+                    .foregroundStyle(Semantic.Colors.textOnColor.opacity(0.95))
 
                 Text(subtitle)
                     .font(.callout)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Semantic.Colors.textOnColor.opacity(0.8))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,7 +41,7 @@ private struct StatsMetricCard: View {
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(gradient)
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 6)
+                .shadow(color: Semantic.Colors.shadowColor, radius: 10, y: 6)
         )
     }
 }
@@ -86,9 +87,9 @@ struct StatsView: View {
     private var statsBackground: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.98, green: 0.94, blue: 1.0),
-                Color(red: 0.92, green: 0.97, blue: 1.0),
-                Color(red: 1.0, green: 0.96, blue: 0.92)
+                Semantic.Colors.primaryColorLight.opacity(0.45),
+                Semantic.Colors.backgroundColor,
+                Semantic.Colors.primaryColorTransparent
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -96,32 +97,39 @@ struct StatsView: View {
         .ignoresSafeArea()
     }
 
+    private var celebrationAccentGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Semantic.Colors.linkColor,
+                Semantic.Colors.tagPhotographyBackground,
+                Semantic.Colors.segmentedControlSelectedColor
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
     private var header: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "sparkles")
                     .font(.title2)
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Semantic.Colors.tagTechBackground)
                 Image(systemName: "party.popper.fill")
                     .font(.title)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.pink, .orange, .purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .foregroundStyle(celebrationAccentGradient)
                 Image(systemName: "sparkles")
                     .font(.title2)
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Semantic.Colors.tagTechBackground)
             }
 
             Text("Your chording wins")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(Semantic.Colors.notBlack)
 
             Text("Every chord represents keystrokes you never had to type.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Semantic.Colors.textDisabled)
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 8)
@@ -138,7 +146,7 @@ struct StatsView: View {
                 subtitle: "Successful chord replacements",
                 systemImage: "hand.tap.fill",
                 gradient: LinearGradient(
-                    colors: [Color(red: 0.35, green: 0.55, blue: 1.0), Color(red: 0.55, green: 0.35, blue: 0.95)],
+                    colors: [Semantic.Colors.cardHighlightBackground, Semantic.Colors.primaryColorReallyDark],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -150,7 +158,7 @@ struct StatsView: View {
                 subtitle: "Output length minus chord input",
                 systemImage: "character.cursor.ibeam",
                 gradient: LinearGradient(
-                    colors: [Color(red: 0.15, green: 0.75, blue: 0.55), Color(red: 0.05, green: 0.55, blue: 0.75)],
+                    colors: [Semantic.Colors.statusSuccess, Semantic.Colors.ctaColorActive],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -162,7 +170,7 @@ struct StatsView: View {
                 subtitle: "At ~\(Int(ChordUsageSummary.averageSecondsPerTypedCharacter * 1000)) ms per character",
                 systemImage: "clock.badge.checkmark.fill",
                 gradient: LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.45, blue: 0.35), Color(red: 0.95, green: 0.25, blue: 0.55)],
+                    colors: [Semantic.Colors.tagPhotographyBackground, Semantic.Colors.statusDestructive],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -174,27 +182,32 @@ struct StatsView: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: "trophy.fill")
                 .font(.title2)
-                .foregroundStyle(.yellow)
+                .foregroundStyle(Semantic.Colors.tagTechBackground)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(celebrationMessage)
                     .font(.headline)
+                    .foregroundStyle(Semantic.Colors.notBlack)
 
                 Text("Keep chording — those saved seconds add up fast.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Semantic.Colors.textDisabled)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.72))
+                .fill(Semantic.Colors.backgroundColorElevated.opacity(0.72))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
-                                colors: [.pink.opacity(0.5), .orange.opacity(0.5), .purple.opacity(0.5)],
+                                colors: [
+                                    Semantic.Colors.linkColor.opacity(0.5),
+                                    Semantic.Colors.tagPhotographyBackground.opacity(0.5),
+                                    Semantic.Colors.segmentedControlSelectedColor.opacity(0.5)
+                                ],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
@@ -223,7 +236,7 @@ struct StatsView: View {
                 .font(.system(size: 44))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.purple, .blue],
+                        colors: [Semantic.Colors.segmentedControlSelectedColor, Semantic.Colors.primaryColor],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -231,10 +244,11 @@ struct StatsView: View {
 
             Text("No chords yet")
                 .font(.headline)
+                .foregroundStyle(Semantic.Colors.notBlack)
 
             Text("Use a chord in any app and your stats will appear here — colourful celebrations included.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Semantic.Colors.textDisabled)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
         }
@@ -242,7 +256,7 @@ struct StatsView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.65))
+                .fill(Semantic.Colors.backgroundColorElevated.opacity(0.65))
         )
     }
 
@@ -252,7 +266,7 @@ struct StatsView: View {
             + "Time saved assumes average typing speed of about 40 words per minute."
         )
         .font(.callout)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Semantic.Colors.textDisabled)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 560)
     }

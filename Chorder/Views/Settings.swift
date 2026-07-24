@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import LaunchAtLogin
+import components_swiftUI
 
 extension Font {
     static let settingsSecondary = Font.callout
@@ -151,7 +152,7 @@ private struct ChordEditorSheet: View {
             showOutputTips.toggle()
         } label: {
             Image(systemName: "info.circle")
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
         .buttonStyle(.plain)
         .help("Output tips")
@@ -160,7 +161,7 @@ private struct ChordEditorSheet: View {
             ScrollView {
                 Text(tipText)
                     .font(.settingsHint)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -178,7 +179,7 @@ private struct ChordEditorSheet: View {
                 if case .create = context {
                     Text("💡 Tip: Hold option (⌥) and click the menu item to quickly add a new chord")
                         .font(.settingsSecondary)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Semantic.Colors.textDisabled)
                 }
             }
 
@@ -188,7 +189,7 @@ private struct ChordEditorSheet: View {
                 if let inputValidationMessage {
                     Text(inputValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 LabeledContent {
                     TextField("", text: $output)
@@ -202,7 +203,7 @@ private struct ChordEditorSheet: View {
                 if let outputValidationMessage {
                     Text(outputValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 Picker("Capitalisation", selection: $capitalisationMode) {
                     ForEach(ChordCapitalisationMode.allCases) { mode in
@@ -300,11 +301,11 @@ private struct ChordInputCombinationCell: View {
                     .frame(minWidth: 24, minHeight: 24)
                     .background {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.white.opacity(0.35))
+                            .fill(Semantic.Colors.backgroundColorElevated.opacity(0.35))
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 0.5)
+                            .strokeBorder(Semantic.Colors.subtleOutlineColor, lineWidth: 0.5)
                     }
             }
         }
@@ -602,7 +603,7 @@ struct SettingsView: View {
         while searchStart < attributed.endIndex,
               let range = attributed[searchStart...].range(of: phrase) {
             attributed[range].link = url
-            attributed[range].foregroundColor = .accentColor
+            attributed[range].foregroundColor = Semantic.Colors.textLink
             attributed[range].underlineStyle = .single
             searchStart = range.upperBound
         }
@@ -645,11 +646,11 @@ struct SettingsView: View {
         if appModel.appSettings.settingsFileDirectory != nil {
             Text(attributedConfigFileEditTip(plain: plain))
                 .font(.settingsSecondary)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         } else {
             Text(plain)
                 .font(.settingsSecondary)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
     }
 
@@ -817,14 +818,14 @@ struct SettingsView: View {
         let keys = appModel.appSettings.duplicateNormalisedInputKeys.joined(separator: ", ")
         return HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+                .foregroundColor(Semantic.Colors.tagTechBackground)
             Text("Multiple chords share the same input combination (\(keys)). Only the last entry in your settings file is used for each.")
                 .font(.settingsHint)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.12))
+        .background(Semantic.Colors.tagTechBackground.opacity(0.12))
         .cornerRadius(8)
     }
 
@@ -847,7 +848,7 @@ struct SettingsView: View {
                         }
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Semantic.Colors.textDisabled)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear filter")
@@ -937,7 +938,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .frame(maxWidth: .infinity)
-                .background(.background)
+                .background(Semantic.Colors.backgroundColor)
             }
             .cornerRadius(8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -995,7 +996,7 @@ struct SettingsView: View {
             Text(title)
             Text(hint)
                 .font(.settingsHint)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -1083,12 +1084,12 @@ struct SettingsView: View {
 
             Text("Version \(Bundle.main.appVersion)")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
 
             if Bundle.main.isLocalDevelopment {
                 Text("Local development build")
                     .font(.callout)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             }
 
             Button("Provide feedback", action: settingsActions.openFeedback)
@@ -1098,7 +1099,7 @@ struct SettingsView: View {
 
             Text("Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1130,7 +1131,7 @@ struct SettingsView: View {
                 if let holdDelayValidationMessage {
                     Text(holdDelayValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 if !Bundle.main.isAppSandboxed {
                     Toggle(isOn: useAccessibilityAPIBinding) {
@@ -1168,7 +1169,7 @@ struct SettingsView: View {
                             }
                         } else {
                             Text("Not set")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Semantic.Colors.textDisabled)
                             Button("Choose…") {
                                 appModel.appSettings.chooseBackupSettingsFileLocation()
                             }
@@ -1227,7 +1228,7 @@ struct SettingsView: View {
             Text(title)
             Text(hasPermission ? "OK" : "Lacking permissions")
                 .font(.settingsSecondary)
-                .foregroundColor(hasPermission ? .green : .red)
+                .foregroundColor(hasPermission ? Semantic.Colors.statusSuccess : Semantic.Colors.statusDestructive)
             Spacer()
             if !hasPermission {
                 Button("Grant permission", action: grantAction)
