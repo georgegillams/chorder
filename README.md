@@ -4,11 +4,10 @@ A macOS app that turns any ordinary keyboard into a chording keyboard — no ded
 
 ## Download
 
-1. Go to https://github.com/georgegillams/software-chording-keyboard/releases/
+1. Go to https://github.com/georgegillams/chorder/releases/
 1. Download and extract the latest zip
 1. Copy the app to `/Applications` and run it
 1. Look for the app in the status bar (keyboard icon)
-
 
 ## How it works
 
@@ -33,7 +32,7 @@ Chords can include:
 ### Clone and run
 
 ```bash
-git clone git@github.com:georgegillams/software-chording-keyboard.git
+git clone git@github.com:georgegillams/chorder.git
 cd software-chording-keyboard
 open "Chorder.xcodeproj"
 ```
