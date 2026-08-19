@@ -99,6 +99,7 @@ private struct ChordEditorSheet: View {
     @Binding var output: String
     @Binding var capitalisationMode: ChordCapitalisationMode
     @Binding var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+    @Binding var spaceAfterOutputMode: ChordSpaceAfterOutputMode
     @Binding var showInputConflictConfirmation: Bool
     let inputConflictTitle: String
     let inputConflictMessage: String
@@ -213,6 +214,11 @@ private struct ChordEditorSheet: View {
                         Text(mode.displayName).tag(mode)
                     }
                 }
+                Picker("Space after output", selection: $spaceAfterOutputMode) {
+                    ForEach(ChordSpaceAfterOutputMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
             }
             .formStyle(.grouped)
             .defaultFocus($focusedField, .input)
@@ -264,6 +270,12 @@ private struct ChordOptionsCell: View {
             }
             if let symbol = chord.spaceBeforeOutputMode.optionsSymbolName,
                let tooltip = chord.spaceBeforeOutputMode.optionsTooltip {
+                Image(systemName: symbol)
+                    .help(tooltip)
+                    .accessibilityLabel(tooltip)
+            }
+            if let symbol = chord.spaceAfterOutputMode.optionsSymbolName,
+               let tooltip = chord.spaceAfterOutputMode.optionsTooltip {
                 Image(systemName: symbol)
                     .help(tooltip)
                     .accessibilityLabel(tooltip)
@@ -437,6 +449,7 @@ struct SettingsView: View {
     @State private var chordFormOutput = ""
     @State private var chordFormCapitalisationMode: ChordCapitalisationMode = .default
     @State private var chordFormSpaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default
+    @State private var chordFormSpaceAfterOutputMode: ChordSpaceAfterOutputMode = .default
     @State private var isChecked = false
     @State private var showFilterInput = false
     @State private var filterString = ""
@@ -506,6 +519,7 @@ struct SettingsView: View {
         chordFormOutput = ""
         chordFormCapitalisationMode = .default
         chordFormSpaceBeforeOutputMode = .default
+        chordFormSpaceAfterOutputMode = .default
         chordEditorContext = .create
     }
 
@@ -518,6 +532,7 @@ struct SettingsView: View {
         chordFormOutput = chord.output
         chordFormCapitalisationMode = chord.capitalisationMode
         chordFormSpaceBeforeOutputMode = chord.spaceBeforeOutputMode
+        chordFormSpaceAfterOutputMode = chord.spaceAfterOutputMode
         chordEditorContext = .edit(id)
     }
 
@@ -554,6 +569,7 @@ struct SettingsView: View {
         chordFormOutput = ""
         chordFormCapitalisationMode = .default
         chordFormSpaceBeforeOutputMode = .default
+        chordFormSpaceAfterOutputMode = .default
         conflictingChordForSave = nil
         showChordInputConflictConfirmation = false
     }
@@ -677,14 +693,16 @@ struct SettingsView: View {
                     input: chordFormInput,
                     output: chordFormOutput,
                     capitalisationMode: chordFormCapitalisationMode,
-                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode,
+                    spaceAfterOutputMode: chordFormSpaceAfterOutputMode
                 )
             } else {
                 appModel.appSettings.addChord(chord: Chord(
                     input: chordFormInput,
                     output: chordFormOutput,
                     capitalisationMode: chordFormCapitalisationMode,
-                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+                    spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode,
+                    spaceAfterOutputMode: chordFormSpaceAfterOutputMode
                 ))
             }
         case .edit(let editingId):
@@ -694,7 +712,8 @@ struct SettingsView: View {
                 input: chordFormInput,
                 output: chordFormOutput,
                 capitalisationMode: chordFormCapitalisationMode,
-                spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode
+                spaceBeforeOutputMode: chordFormSpaceBeforeOutputMode,
+                spaceAfterOutputMode: chordFormSpaceAfterOutputMode
             )
         case nil:
             return
@@ -775,6 +794,7 @@ struct SettingsView: View {
                 output: $chordFormOutput,
                 capitalisationMode: $chordFormCapitalisationMode,
                 spaceBeforeOutputMode: $chordFormSpaceBeforeOutputMode,
+                spaceAfterOutputMode: $chordFormSpaceAfterOutputMode,
                 showInputConflictConfirmation: $showChordInputConflictConfirmation,
                 inputConflictTitle: chordInputConflictTitle,
                 inputConflictMessage: chordInputConflictMessage,

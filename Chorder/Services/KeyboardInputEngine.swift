@@ -192,7 +192,7 @@ final class KeyboardInputEngine {
 
     private func updatePostReplacementSpacingState(for chord: Chord) {
         autoInsertedSpaceBeforeCurrentInput = false
-        owedSpace = !chord.hasPipe
+        owedSpace = !chord.suppressesOwedSpaceAfterOutput
     }
 
     /// Clears in-progress chord detection when input is interrupted (modifiers, navigation, special keys).

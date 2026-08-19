@@ -43,6 +43,42 @@ enum ChordCapitalisationMode: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+enum ChordSpaceAfterOutputMode: String, CaseIterable, Identifiable, Hashable {
+    case `default`
+    case never
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .default:
+            return "Default"
+        case .never:
+            return "Never"
+        }
+    }
+
+    /// SF Symbol for the chords table Options column; nil when default.
+    var optionsSymbolName: String? {
+        switch self {
+        case .default:
+            return nil
+        case .never:
+            return "arrow.right.to.line.compact"
+        }
+    }
+
+    /// Tooltip for the chords table Options column; nil when default.
+    var optionsTooltip: String? {
+        switch self {
+        case .default:
+            return nil
+        case .never:
+            return "Space after output: Never"
+        }
+    }
+}
+
 enum ChordSpaceBeforeOutputMode: String, CaseIterable, Identifiable, Hashable {
     case `default`
     case always
@@ -140,6 +176,7 @@ class Chord: Identifiable, ObservableObject {
     @Published var output: String
     @Published var capitalisationMode: ChordCapitalisationMode
     @Published var spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+    @Published var spaceAfterOutputMode: ChordSpaceAfterOutputMode
     @Published var usageByMachine: [String: Int]
     @Published var deleted: Bool
 
@@ -160,6 +197,12 @@ class Chord: Identifiable, ObservableObject {
     var outputChunks: [String] = []
     var pipeNegativePosition = 0
     var hasPipe = false
+
+    /// True when no space should be queued after this chord fires — either because the output
+    /// contains a cursor-placement pipe, or the chord is configured to never insert a trailing space.
+    var suppressesOwedSpaceAfterOutput: Bool {
+        hasPipe || spaceAfterOutputMode == .never
+    }
 
     /// True when raw output contains more than one unescaped cursor pipe.
     var hasInvalidOutput: Bool {
@@ -182,6 +225,7 @@ class Chord: Identifiable, ObservableObject {
         usageByMachine: [String: Int] = [:],
         capitalisationMode: ChordCapitalisationMode = .default,
         spaceBeforeOutputMode: ChordSpaceBeforeOutputMode = .default,
+        spaceAfterOutputMode: ChordSpaceAfterOutputMode = .default,
         deleted: Bool = false
     ) {
         // NOTE: input and output strings should be unmodified, as these will be saved to settings file and re-read when the app is started.
@@ -191,6 +235,7 @@ class Chord: Identifiable, ObservableObject {
         self.usageByMachine = usageByMachine
         self.capitalisationMode = capitalisationMode
         self.spaceBeforeOutputMode = spaceBeforeOutputMode
+        self.spaceAfterOutputMode = spaceAfterOutputMode
         self.deleted = deleted
         rebuildDerivedState()
     }
@@ -199,12 +244,14 @@ class Chord: Identifiable, ObservableObject {
         input: String,
         output: String,
         capitalisationMode: ChordCapitalisationMode,
-        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode,
+        spaceAfterOutputMode: ChordSpaceAfterOutputMode
     ) {
         self.input = input
         self.output = output
         self.capitalisationMode = capitalisationMode
         self.spaceBeforeOutputMode = spaceBeforeOutputMode
+        self.spaceAfterOutputMode = spaceAfterOutputMode
         rebuildDerivedState()
     }
 
