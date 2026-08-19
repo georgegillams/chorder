@@ -178,7 +178,8 @@ class AppSettings: ObservableObject {
         input: String,
         output: String,
         capitalisationMode: ChordCapitalisationMode,
-        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode
+        spaceBeforeOutputMode: ChordSpaceBeforeOutputMode,
+        spaceAfterOutputMode: ChordSpaceAfterOutputMode
     ) {
         guard let index = chords.firstIndex(where: { $0.id == id }) else {
             return
@@ -187,7 +188,8 @@ class AppSettings: ObservableObject {
             input: input,
             output: output,
             capitalisationMode: capitalisationMode,
-            spaceBeforeOutputMode: spaceBeforeOutputMode
+            spaceBeforeOutputMode: spaceBeforeOutputMode,
+            spaceAfterOutputMode: spaceAfterOutputMode
         )
         recalculateAlphabeticalMapping()
         objectWillChange.send()
@@ -228,12 +230,16 @@ class AppSettings: ObservableObject {
             let spaceBeforeOutputMode = ChordSpaceBeforeOutputMode(
                 rawValue: serialisableChord.spaceBeforeOutput ?? ""
             ) ?? .default
+            let spaceAfterOutputMode = ChordSpaceAfterOutputMode(
+                rawValue: serialisableChord.spaceAfterOutput ?? ""
+            ) ?? .default
             return Chord(
                 id: serialisableChord.id,
                 input: serialisableChord.input,
                 output: serialisableChord.output,
                 capitalisationMode: capitalisationMode,
                 spaceBeforeOutputMode: spaceBeforeOutputMode,
+                spaceAfterOutputMode: spaceAfterOutputMode,
                 deleted: serialisableChord.deleted ?? false
             )
         }
@@ -269,6 +275,7 @@ class AppSettings: ObservableObject {
                 output: chord.output,
                 capitalisationMode: chord.capitalisationMode.rawValue,
                 spaceBeforeOutput: chord.spaceBeforeOutputMode.rawValue,
+                spaceAfterOutput: chord.spaceAfterOutputMode.rawValue,
                 deleted: chord.deleted ? true : nil
             )
         }
@@ -476,6 +483,7 @@ struct SerialisableChord: Codable {
     var output: String
     var capitalisationMode: String?
     var spaceBeforeOutput: String?
+    var spaceAfterOutput: String?
     var deleted: Bool?
 
     enum CodingKeys: String, CodingKey {
@@ -484,6 +492,7 @@ struct SerialisableChord: Codable {
         case output
         case capitalisationMode
         case spaceBeforeOutput
+        case spaceAfterOutput
         case deleted
     }
 
@@ -493,6 +502,7 @@ struct SerialisableChord: Codable {
         output: String,
         capitalisationMode: String?,
         spaceBeforeOutput: String? = nil,
+        spaceAfterOutput: String? = nil,
         deleted: Bool? = nil
     ) {
         self.id = id
@@ -500,6 +510,7 @@ struct SerialisableChord: Codable {
         self.output = output
         self.capitalisationMode = capitalisationMode
         self.spaceBeforeOutput = spaceBeforeOutput
+        self.spaceAfterOutput = spaceAfterOutput
         self.deleted = deleted
     }
 
@@ -510,6 +521,7 @@ struct SerialisableChord: Codable {
         output = try container.decode(String.self, forKey: .output)
         capitalisationMode = try container.decodeIfPresent(String.self, forKey: .capitalisationMode)
         spaceBeforeOutput = try container.decodeIfPresent(String.self, forKey: .spaceBeforeOutput)
+        spaceAfterOutput = try container.decodeIfPresent(String.self, forKey: .spaceAfterOutput)
         deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted)
     }
 
@@ -520,6 +532,7 @@ struct SerialisableChord: Codable {
         try container.encode(output, forKey: .output)
         try container.encodeIfPresent(capitalisationMode, forKey: .capitalisationMode)
         try container.encodeIfPresent(spaceBeforeOutput, forKey: .spaceBeforeOutput)
+        try container.encodeIfPresent(spaceAfterOutput, forKey: .spaceAfterOutput)
         if deleted == true {
             try container.encode(true, forKey: .deleted)
         }

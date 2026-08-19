@@ -210,9 +210,11 @@ Note: If releasing for manual distribution, disable app sandboxing.
 1. In Xcode, select the **Chorder** scheme and **Any Mac (Mac Catalyst)** / **My Mac** as appropriate.
 1. Update **Version** / **Build** (see App Store steps above).
 1. Product → **Archive**.
-1. In the Organizer, select the archive → **Distribute App** → **Copy App** (or **Export**) and export `Chorder.app`.
+1. In the Organizer, select the archive → **Distribute App** → **Direct Distribution**
+1. After notarization completes, in the table row, select **Export** to export `Chorder.app`.
 1. Zip the app for distribution (Finder: right click `Chorder.app` → **Compress**) and name it like `Chorder-<version>.zip`.
-1. In GitHub: go to the repo → **Releases** → **Draft a new release**.
+1. Revert XCode build target to **Chorder** → **My Mac**.
+1. In GitHub: go to the [releases page](https://github.com/georgegillams/chorder/releases/) and click **Draft a new release**.
 1. Choose a tag (create one if needed) like `v<version>`, set the release title, and write release notes.
 1. Under **Assets**, upload `Chorder-<version>.zip`.
 1. Click **Publish release**.

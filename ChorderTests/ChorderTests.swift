@@ -423,7 +423,8 @@ final class ChorderTests: XCTestCase {
             input: "ab",
             output: "a|b|c",
             capitalisationMode: .default,
-            spaceBeforeOutputMode: .default
+            spaceBeforeOutputMode: .default,
+            spaceAfterOutputMode: .default
         )
 
         XCTAssertTrue(chord.hasInvalidOutput)
@@ -438,7 +439,8 @@ final class ChorderTests: XCTestCase {
             input: "ab",
             output: "x|y|z",
             capitalisationMode: .default,
-            spaceBeforeOutputMode: .default
+            spaceBeforeOutputMode: .default,
+            spaceAfterOutputMode: .default
         )
 
         let (segments, leftArrowCount) = chord.resolveTypingSegments()
