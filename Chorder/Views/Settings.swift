@@ -15,6 +15,116 @@ extension Font {
     static let settingsHint = Font.footnote
 }
 
+struct SemanticButtonStyle: ButtonStyle {
+    enum Kind {
+        case primary
+        case bouncy
+        case destructiveGhost
+    }
+
+    var kind: Kind = .primary
+
+    func makeBody(configuration: Configuration) -> some View {
+        SemanticButtonLabel(kind: kind, configuration: configuration)
+    }
+}
+
+private struct SemanticButtonLabel: View {
+    let kind: SemanticButtonStyle.Kind
+    let configuration: ButtonStyle.Configuration
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovering = false
+
+    var body: some View {
+        configuration.label
+            .underline(false)
+            .fontWeight(.regular)
+            .foregroundColor(foreground)
+            .padding(.horizontal, kind == .bouncy ? 8 : 18)
+            .padding(.vertical, kind == .bouncy ? 3 : 7)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: Primitive.Layout.borderRadiusSm, style: .continuous))
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+
+    private var isHoveringEnabled: Bool {
+        isHovering && isEnabled
+    }
+
+    private var foreground: Color {
+        guard isEnabled else {
+            return Semantic.Colors.buttonDisabledForeground
+        }
+        switch kind {
+        case .primary:
+            if configuration.isPressed { return Semantic.Colors.buttonPrimaryForegroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonPrimaryForegroundHover }
+            return Semantic.Colors.buttonPrimaryForeground
+        case .bouncy:
+            if configuration.isPressed { return Semantic.Colors.buttonBouncyForegroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonBouncyForegroundHover }
+            return Semantic.Colors.buttonBouncyForeground
+        case .destructiveGhost:
+            if configuration.isPressed { return Semantic.Colors.destructiveColorActive }
+            if isHoveringEnabled { return Semantic.Colors.destructiveColorHover }
+            return Semantic.Colors.destructiveColor
+        }
+    }
+
+    private var background: Color {
+        guard isEnabled else {
+            return kind == .primary
+                ? Semantic.Colors.buttonDisabledBackground
+                : Color.clear
+        }
+        switch kind {
+        case .primary:
+            if configuration.isPressed { return Semantic.Colors.buttonPrimaryBackgroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonPrimaryBackgroundHover }
+            return Semantic.Colors.buttonPrimaryBackground
+        case .bouncy:
+            if configuration.isPressed { return Semantic.Colors.buttonBouncyBackgroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonBouncyBackgroundHover }
+            return Semantic.Colors.buttonBouncyBackground
+        case .destructiveGhost:
+            if configuration.isPressed { return Semantic.Colors.buttonDestructiveBackgroundActive.opacity(0.16) }
+            if isHoveringEnabled { return Semantic.Colors.buttonDestructiveBackgroundHover.opacity(0.12) }
+            return Color.clear
+        }
+    }
+}
+
+extension ButtonStyle where Self == SemanticButtonStyle {
+    static var semanticPrimary: SemanticButtonStyle { SemanticButtonStyle(kind: .primary) }
+    static var semanticBouncy: SemanticButtonStyle { SemanticButtonStyle(kind: .bouncy) }
+    static var semanticDestructiveGhost: SemanticButtonStyle { SemanticButtonStyle(kind: .destructiveGhost) }
+}
+
+extension AttributedString {
+    mutating func applySemanticLinkAppearance(to range: Range<AttributedString.Index>) {
+        self[range].foregroundColor = Semantic.Colors.textLink
+        self[range].underlineStyle = Text.LineStyle(pattern: .solid, color: .clear)
+        self[range].appKit.underlineStyle = []
+        self[range].appKit.underlineColor = .clear
+        if let existing = self[range].inlinePresentationIntent {
+            self[range].inlinePresentationIntent = existing.union(.stronglyEmphasized)
+        } else {
+            self[range].inlinePresentationIntent = .stronglyEmphasized
+        }
+    }
+
+    mutating func applySemanticLinkAppearanceToLinks() {
+        let ranges = runs.compactMap { run in
+            run.link != nil ? run.range : nil
+        }
+        for range in ranges {
+            applySemanticLinkAppearance(to: range)
+        }
+    }
+}
+
 /// Permission and system actions required by the settings UI.
 protocol SettingsActions {
     func hasInputMonitoringPermission() -> Bool
@@ -603,8 +713,7 @@ struct SettingsView: View {
         while searchStart < attributed.endIndex,
               let range = attributed[searchStart...].range(of: phrase) {
             attributed[range].link = url
-            attributed[range].foregroundColor = Semantic.Colors.textLink
-            attributed[range].underlineStyle = .single
+            attributed.applySemanticLinkAppearance(to: range)
             searchStart = range.upperBound
         }
     }
@@ -1070,6 +1179,16 @@ struct SettingsView: View {
         .navigationTitle("How to use Chorder")
     }
 
+    private var aboutCreditText: AttributedString {
+        let markdown = "Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)"
+        var attributed = (try? AttributedString(
+            markdown: markdown,
+            options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(markdown)
+        attributed.applySemanticLinkAppearanceToLinks()
+        return attributed
+    }
+
     private var aboutPanel: some View {
         VStack(spacing: 16) {
             if let icon = NSApplication.shared.applicationIconImage {
@@ -1093,11 +1212,10 @@ struct SettingsView: View {
             }
 
             Button("Provide feedback", action: settingsActions.openFeedback)
-                .buttonStyle(.link)
-                .font(.body)
+                .buttonStyle(.semanticPrimary)
                 .padding(.top, 4)
 
-            Text("Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)")
+            Text(aboutCreditText)
                 .font(.body)
                 .foregroundColor(Semantic.Colors.textDisabled)
                 .padding(.top, 8)
@@ -1162,7 +1280,7 @@ struct SettingsView: View {
                             Button(action: revealSettingsFileInFinder) {
                                 Text(backupLocationDisplayName(for: backupLocation))
                             }
-                            .buttonStyle(.link)
+                            .buttonStyle(.semanticBouncy)
 
                             Button("Change…") {
                                 appModel.appSettings.chooseBackupSettingsFileLocation()

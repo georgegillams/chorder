@@ -151,7 +151,7 @@ struct PracticeView: View {
             Button("Delete this chord", role: .destructive) {
                 showDeleteConfirmation = true
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.semanticDestructiveGhost)
             .confirmationDialog(
                 deleteConfirmationTitle(for: chord),
                 isPresented: $showDeleteConfirmation,
