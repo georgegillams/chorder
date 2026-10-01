@@ -11,6 +11,7 @@
 		086E69CC2DA5B2D200B360A1 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086E69CB2DA5B2D200B360A1 /* AppSettings.swift */; };
 		0881F2C32DA6772900EE61A1 /* Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0881F2C22DA6772600EE61A1 /* Debug.swift */; };
 		0898B41B2BE16DBA0087D747 /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 0898B41A2BE16DBA0087D747 /* LaunchAtLogin */; };
+		CSUI00012DA6B2D200B360C1 /* components-swiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = CSUI00022DA6B2D200B360C1 /* components-swiftUI */; };
 		08E19EF229DE19F80081AB4E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E19EF129DE19F80081AB4E /* AppDelegate.swift */; };
 		08E19EF629DE19F90081AB4E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 08E19EF529DE19F90081AB4E /* Assets.xcassets */; };
 		08E19EF929DE19F90081AB4E /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 08E19EF729DE19F90081AB4E /* Main.storyboard */; };
@@ -100,6 +101,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0898B41B2BE16DBA0087D747 /* LaunchAtLogin in Frameworks */,
+				CSUI00012DA6B2D200B360C1 /* components-swiftUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,6 +270,7 @@
 			name = Chorder;
 			packageProductDependencies = (
 				0898B41A2BE16DBA0087D747 /* LaunchAtLogin */,
+				CSUI00022DA6B2D200B360C1 /* components-swiftUI */,
 			);
 			productName = Chorder;
 			productReference = 08E19EEE29DE19F80081AB4E /* Chorder Local.app */;
@@ -343,6 +346,7 @@
 			mainGroup = 08E19EE529DE19F80081AB4E;
 			packageReferences = (
 				0898B4192BE16D140087D747 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
+				CSUI00032DA6B2D200B360C1 /* XCRemoteSwiftPackageReference "components-swiftUI" */,
 			);
 			productRefGroup = 08E19EEF29DE19F80081AB4E /* Products */;
 			projectDirPath = "";
@@ -759,6 +763,14 @@
 				minimumVersion = 1.1.0;
 			};
 		};
+		CSUI00032DA6B2D200B360C1 /* XCRemoteSwiftPackageReference "components-swiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/georgegillams/components-swiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -766,6 +778,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0898B4192BE16D140087D747 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
 			productName = LaunchAtLogin;
+		};
+		CSUI00022DA6B2D200B360C1 /* components-swiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CSUI00032DA6B2D200B360C1 /* XCRemoteSwiftPackageReference "components-swiftUI" */;
+			productName = "components-swiftUI";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import components_swiftUI
 
 private struct PracticeInputHint: View {
     let chordInput: String
@@ -12,13 +13,13 @@ private struct PracticeInputHint: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "questionmark.circle")
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .onHover { isHovered = $0 }
 
             if isHovered {
                 Text(chordInput)
                     .font(.system(.subheadline, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             }
         }
         .accessibilityElement(children: .combine)
@@ -94,12 +95,13 @@ struct PracticeView: View {
         VStack(spacing: 12) {
             Image(systemName: "list.bullet.rectangle")
                 .font(.largeTitle)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
             Text("No chords to practise")
                 .font(.headline)
+                .foregroundColor(Semantic.Colors.notBlack)
             Text("Add some chords first, then come back to practise the ones you use least.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
         }
@@ -113,7 +115,7 @@ struct PracticeView: View {
             VStack(spacing: 8) {
                 Text(isShowingSuccess ? "You produced" : "Chord this output")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
 
                 Text(isShowingSuccess ? lastChordedOutput : targetOutput)
                     .font(.system(size: 44, weight: .medium, design: .rounded))
@@ -121,14 +123,14 @@ struct PracticeView: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 520)
-                    .foregroundColor(isShowingSuccess ? .green : .primary)
+                    .foregroundColor(isShowingSuccess ? Semantic.Colors.statusSuccess : Semantic.Colors.notBlack)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Text("Practise here")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Semantic.Colors.textDisabled)
 
                     PracticeInputHint(chordInput: chord.input)
                 }
@@ -140,17 +142,17 @@ struct PracticeView: View {
             if chord.totalUsageCount == 0 {
                 Text("Never used — good candidate to learn")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             } else {
                 Text("Used \(chord.totalUsageCount) time\(chord.totalUsageCount == 1 ? "" : "s")")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             }
 
             Button("Delete this chord", role: .destructive) {
                 showDeleteConfirmation = true
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.semanticDestructiveGhost)
             .confirmationDialog(
                 deleteConfirmationTitle(for: chord),
                 isPresented: $showDeleteConfirmation,
@@ -182,15 +184,15 @@ struct PracticeView: View {
             if isShowingSuccess {
                 Label("Chord matched", systemImage: "checkmark.circle.fill")
                     .font(.subheadline)
-                    .foregroundColor(.green)
+                    .foregroundColor(Semantic.Colors.statusSuccess)
             } else if monitor.heldCharacters.isEmpty {
                 Text("Hold the chord keys together…")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             } else {
                 Text(monitor.heldCharacters)
                     .font(.system(.title2, design: .monospaced))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Semantic.Colors.notBlack)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
@@ -198,10 +200,10 @@ struct PracticeView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1)
+                .strokeBorder(Semantic.Colors.subtleOutlineColor, lineWidth: 1)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color(nsColor: .textBackgroundColor))
+                        .fill(Semantic.Colors.inputBackground)
                 )
         )
         .accessibilityElement(children: .combine)

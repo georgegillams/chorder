@@ -8,10 +8,121 @@
 import AppKit
 import SwiftUI
 import LaunchAtLogin
+import components_swiftUI
 
 extension Font {
     static let settingsSecondary = Font.callout
     static let settingsHint = Font.footnote
+}
+
+struct SemanticButtonStyle: ButtonStyle {
+    enum Kind {
+        case primary
+        case bouncy
+        case destructiveGhost
+    }
+
+    var kind: Kind = .primary
+
+    func makeBody(configuration: Configuration) -> some View {
+        SemanticButtonLabel(kind: kind, configuration: configuration)
+    }
+}
+
+private struct SemanticButtonLabel: View {
+    let kind: SemanticButtonStyle.Kind
+    let configuration: ButtonStyle.Configuration
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovering = false
+
+    var body: some View {
+        configuration.label
+            .underline(false)
+            .fontWeight(.regular)
+            .foregroundColor(foreground)
+            .padding(.horizontal, kind == .bouncy ? 8 : 18)
+            .padding(.vertical, kind == .bouncy ? 3 : 7)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: Primitive.Layout.borderRadiusSm, style: .continuous))
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+
+    private var isHoveringEnabled: Bool {
+        isHovering && isEnabled
+    }
+
+    private var foreground: Color {
+        guard isEnabled else {
+            return Semantic.Colors.buttonDisabledForeground
+        }
+        switch kind {
+        case .primary:
+            if configuration.isPressed { return Semantic.Colors.buttonPrimaryForegroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonPrimaryForegroundHover }
+            return Semantic.Colors.buttonPrimaryForeground
+        case .bouncy:
+            if configuration.isPressed { return Semantic.Colors.buttonBouncyForegroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonBouncyForegroundHover }
+            return Semantic.Colors.buttonBouncyForeground
+        case .destructiveGhost:
+            if configuration.isPressed { return Semantic.Colors.destructiveColorActive }
+            if isHoveringEnabled { return Semantic.Colors.destructiveColorHover }
+            return Semantic.Colors.destructiveColor
+        }
+    }
+
+    private var background: Color {
+        guard isEnabled else {
+            return kind == .primary
+                ? Semantic.Colors.buttonDisabledBackground
+                : Color.clear
+        }
+        switch kind {
+        case .primary:
+            if configuration.isPressed { return Semantic.Colors.buttonPrimaryBackgroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonPrimaryBackgroundHover }
+            return Semantic.Colors.buttonPrimaryBackground
+        case .bouncy:
+            if configuration.isPressed { return Semantic.Colors.buttonBouncyBackgroundActive }
+            if isHoveringEnabled { return Semantic.Colors.buttonBouncyBackgroundHover }
+            return Semantic.Colors.buttonBouncyBackground
+        case .destructiveGhost:
+            if configuration.isPressed { return Semantic.Colors.buttonDestructiveBackgroundActive.opacity(0.16) }
+            if isHoveringEnabled { return Semantic.Colors.buttonDestructiveBackgroundHover.opacity(0.12) }
+            return Color.clear
+        }
+    }
+}
+
+extension ButtonStyle where Self == SemanticButtonStyle {
+    static var semanticPrimary: SemanticButtonStyle { SemanticButtonStyle(kind: .primary) }
+    static var semanticBouncy: SemanticButtonStyle { SemanticButtonStyle(kind: .bouncy) }
+    static var semanticDestructiveGhost: SemanticButtonStyle { SemanticButtonStyle(kind: .destructiveGhost) }
+}
+
+extension AttributedString {
+    mutating func applySemanticLinkAppearance(to range: Range<AttributedString.Index>) {
+        self[range].foregroundColor = Semantic.Colors.textLink
+        self[range].underlineStyle = Text.LineStyle(pattern: .solid, color: .clear)
+        self[range].appKit.underlineStyle = []
+        self[range].appKit.underlineColor = .clear
+        if let existing = self[range].inlinePresentationIntent {
+            self[range].inlinePresentationIntent = existing.union(.stronglyEmphasized)
+        } else {
+            self[range].inlinePresentationIntent = .stronglyEmphasized
+        }
+    }
+
+    mutating func applySemanticLinkAppearanceToLinks() {
+        let ranges = runs.compactMap { run in
+            run.link != nil ? run.range : nil
+        }
+        for range in ranges {
+            applySemanticLinkAppearance(to: range)
+        }
+    }
 }
 
 /// Permission and system actions required by the settings UI.
@@ -151,7 +262,7 @@ private struct ChordEditorSheet: View {
             showOutputTips.toggle()
         } label: {
             Image(systemName: "info.circle")
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
         .buttonStyle(.plain)
         .help("Output tips")
@@ -160,7 +271,7 @@ private struct ChordEditorSheet: View {
             ScrollView {
                 Text(tipText)
                     .font(.settingsHint)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -178,7 +289,7 @@ private struct ChordEditorSheet: View {
                 if case .create = context {
                     Text("💡 Tip: Hold option (⌥) and click the menu item to quickly add a new chord")
                         .font(.settingsSecondary)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Semantic.Colors.textDisabled)
                 }
             }
 
@@ -188,7 +299,7 @@ private struct ChordEditorSheet: View {
                 if let inputValidationMessage {
                     Text(inputValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 LabeledContent {
                     TextField("", text: $output)
@@ -202,7 +313,7 @@ private struct ChordEditorSheet: View {
                 if let outputValidationMessage {
                     Text(outputValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 Picker("Capitalisation", selection: $capitalisationMode) {
                     ForEach(ChordCapitalisationMode.allCases) { mode in
@@ -300,11 +411,11 @@ private struct ChordInputCombinationCell: View {
                     .frame(minWidth: 24, minHeight: 24)
                     .background {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.white.opacity(0.35))
+                            .fill(Semantic.Colors.backgroundColorElevated.opacity(0.35))
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 0.5)
+                            .strokeBorder(Semantic.Colors.subtleOutlineColor, lineWidth: 0.5)
                     }
             }
         }
@@ -602,8 +713,7 @@ struct SettingsView: View {
         while searchStart < attributed.endIndex,
               let range = attributed[searchStart...].range(of: phrase) {
             attributed[range].link = url
-            attributed[range].foregroundColor = .accentColor
-            attributed[range].underlineStyle = .single
+            attributed.applySemanticLinkAppearance(to: range)
             searchStart = range.upperBound
         }
     }
@@ -645,11 +755,11 @@ struct SettingsView: View {
         if appModel.appSettings.settingsFileDirectory != nil {
             Text(attributedConfigFileEditTip(plain: plain))
                 .font(.settingsSecondary)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         } else {
             Text(plain)
                 .font(.settingsSecondary)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
     }
 
@@ -821,14 +931,14 @@ struct SettingsView: View {
         let keys = appModel.appSettings.duplicateNormalisedInputKeys.joined(separator: ", ")
         return HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+                .foregroundColor(Semantic.Colors.tagTechBackground)
             Text("Multiple chords share the same input combination (\(keys)). Only the last entry in your settings file is used for each.")
                 .font(.settingsHint)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.12))
+        .background(Semantic.Colors.tagTechBackground.opacity(0.12))
         .cornerRadius(8)
     }
 
@@ -851,7 +961,7 @@ struct SettingsView: View {
                         }
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Semantic.Colors.textDisabled)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear filter")
@@ -941,7 +1051,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .frame(maxWidth: .infinity)
-                .background(.background)
+                .background(Semantic.Colors.backgroundColor)
             }
             .cornerRadius(8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -999,7 +1109,7 @@ struct SettingsView: View {
             Text(title)
             Text(hint)
                 .font(.settingsHint)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -1077,6 +1187,16 @@ struct SettingsView: View {
         .navigationTitle("How to use Chorder")
     }
 
+    private var aboutCreditText: AttributedString {
+        let markdown = "Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)"
+        var attributed = (try? AttributedString(
+            markdown: markdown,
+            options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(markdown)
+        attributed.applySemanticLinkAppearanceToLinks()
+        return attributed
+    }
+
     private var aboutPanel: some View {
         VStack(spacing: 16) {
             if let icon = NSApplication.shared.applicationIconImage {
@@ -1091,22 +1211,21 @@ struct SettingsView: View {
 
             Text("Version \(Bundle.main.appVersion)")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
 
             if Bundle.main.isLocalDevelopment {
                 Text("Local development build")
                     .font(.callout)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Semantic.Colors.textDisabled)
             }
 
             Button("Provide feedback", action: settingsActions.openFeedback)
-                .buttonStyle(.link)
-                .font(.body)
+                .buttonStyle(.semanticPrimary)
                 .padding(.top, 4)
 
-            Text("Made with ❤️ by [George Gillams](https://www.georgegillams.co.uk/?utm_source=chorder)")
+            Text(aboutCreditText)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(Semantic.Colors.textDisabled)
                 .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1138,7 +1257,7 @@ struct SettingsView: View {
                 if let holdDelayValidationMessage {
                     Text(holdDelayValidationMessage)
                         .font(.settingsHint)
-                        .foregroundColor(.red)
+                        .foregroundColor(Semantic.Colors.statusDestructive)
                 }
                 if !Bundle.main.isAppSandboxed {
                     Toggle(isOn: useAccessibilityAPIBinding) {
@@ -1169,14 +1288,14 @@ struct SettingsView: View {
                             Button(action: revealSettingsFileInFinder) {
                                 Text(backupLocationDisplayName(for: backupLocation))
                             }
-                            .buttonStyle(.link)
+                            .buttonStyle(.semanticBouncy)
 
                             Button("Change…") {
                                 appModel.appSettings.chooseBackupSettingsFileLocation()
                             }
                         } else {
                             Text("Not set")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Semantic.Colors.textDisabled)
                             Button("Choose…") {
                                 appModel.appSettings.chooseBackupSettingsFileLocation()
                             }
@@ -1235,7 +1354,7 @@ struct SettingsView: View {
             Text(title)
             Text(hasPermission ? "OK" : "Lacking permissions")
                 .font(.settingsSecondary)
-                .foregroundColor(hasPermission ? .green : .red)
+                .foregroundColor(hasPermission ? Semantic.Colors.statusSuccess : Semantic.Colors.statusDestructive)
             Spacer()
             if !hasPermission {
                 Button("Grant permission", action: grantAction)
