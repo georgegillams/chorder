@@ -18,7 +18,8 @@ For example, pressing `t` and `h` together matches the chord `th` → `the`. The
 Chords can include:
 
 - A cursor pipe (`|`) to position the caret mid-output
-- Date placeholders (`{{yyyy-MM-dd}}`, etc.)
+- Date placeholders (`{{yyyy}}-{{MM}}-{{dd}}`, etc.)
+- UUID placeholders (`{{uuid}}` / `{{UUID}}`)
 - Per-chord options for capitalisation and leading-space behaviour
 
 ## Requirements

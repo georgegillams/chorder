@@ -323,7 +323,7 @@ class Chord: Identifiable, ObservableObject {
         return (before, after, true, false)
     }
 
-    /// Text to type and how many left-arrow presses follow, after expanding `{{date}}` tokens at fire time.
+    /// Text to type and how many left-arrow presses follow, after expanding `{{date}}` / `{{uuid}}` tokens at fire time.
     func resolveTypingSegments(
         referenceDate: Date = Date(),
         capitalisationMode: CapitalisationMode = .off
@@ -342,7 +342,7 @@ class Chord: Identifiable, ObservableObject {
         return (Self.capitalisedSegments(segments, mode: effectiveCapitalisationMode), after.count)
     }
 
-    /// Resolved output text (placeholders expanded, pipe removed). Uses the current date for `{{date}}` tokens.
+    /// Resolved output text (placeholders expanded, pipe removed). Expands `{{date}}` and `{{uuid}}` tokens at call time.
     var displayOutput: String {
         displayOutput(referenceDate: Date())
     }
