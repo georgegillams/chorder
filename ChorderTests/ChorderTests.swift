@@ -631,6 +631,39 @@ final class ChorderTests: XCTestCase {
         )
     }
 
+    func testOutputPlaceholderExpansionReplacesLowercaseUuidToken() {
+        let fixed = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+        XCTAssertEqual(
+            OutputPlaceholderExpansion.expand("id={{uuid}}", uuidProvider: { fixed }),
+            "id=e621e1f8-c36c-495a-93fc-0c247a3e6e5f"
+        )
+    }
+
+    func testOutputPlaceholderExpansionReplacesUppercaseUuidToken() {
+        let fixed = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+        XCTAssertEqual(
+            OutputPlaceholderExpansion.expand("id={{UUID}}", uuidProvider: { fixed }),
+            "id=E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
+        )
+    }
+
+    func testOutputPlaceholderExpansionGeneratesDistinctUuidsPerToken() {
+        var callCount = 0
+        let uuids = [
+            UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+        ]
+        // Tokens are expanded right-to-left, so the second placeholder is filled first.
+        let result = OutputPlaceholderExpansion.expand("{{uuid}}-{{uuid}}") {
+            defer { callCount += 1 }
+            return uuids[callCount]
+        }
+        XCTAssertEqual(
+            result,
+            "22222222-2222-2222-2222-222222222222-11111111-1111-1111-1111-111111111111"
+        )
+    }
+
     // MARK: - Chord typing segments and decomposition
 
     func testDecomposedOutputSplitsAtCursorPipe() {

@@ -87,6 +87,7 @@ struct PracticeView: View {
         .onChange(of: appModel.appSettings.millisecondsToHold) { _ in
             updateMonitoring()
         }
+        .navigationTitle("Practice")
     }
 
     private var emptyState: some View {

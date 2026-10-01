@@ -5,12 +5,17 @@
 
 import Foundation
 
-/// Expands `{{…}}` segments using `DateFormatter` / ICU date field symbols (e.g. `yyyy`, `MM`, `dd`, `HH`, `mm`, `E`, `zzz`).
+/// Expands `{{…}}` segments: `{{uuid}}` / `{{UUID}}` become a random UUID; other tokens use
+/// `DateFormatter` / ICU date field symbols (e.g. `yyyy`, `MM`, `dd`, `HH`, `mm`, `E`, `zzz`).
 /// See Unicode TR35 date field symbols for the full set supported by Apple’s formatter.
 enum OutputPlaceholderExpansion {
     private static let tokenRegex = try! NSRegularExpression(pattern: #"\{\{([^{}]+)\}\}"#, options: [])
 
-    static func expand(_ string: String, referenceDate: Date = Date()) -> String {
+    static func expand(
+        _ string: String,
+        referenceDate: Date = Date(),
+        uuidProvider: () -> UUID = { UUID() }
+    ) -> String {
         let nsString = string as NSString
         let fullRange = NSRange(location: 0, length: nsString.length)
         let matches = tokenRegex.matches(in: string, options: [], range: fullRange)
@@ -19,13 +24,28 @@ enum OutputPlaceholderExpansion {
         var result = string
         for match in matches.reversed() {
             guard match.numberOfRanges >= 2 else { continue }
-            var inner = nsString.substring(with: match.range(at: 1))
+            let inner = nsString.substring(with: match.range(at: 1))
             if inner.isEmpty { continue }
 
-            let replacement = formatICUDatePattern(inner, date: referenceDate)
+            let replacement = replacement(for: inner, date: referenceDate, uuidProvider: uuidProvider)
             result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
         }
         return result
+    }
+
+    private static func replacement(
+        for inner: String,
+        date: Date,
+        uuidProvider: () -> UUID
+    ) -> String {
+        switch inner {
+        case "uuid":
+            return uuidProvider().uuidString.lowercased()
+        case "UUID":
+            return uuidProvider().uuidString.uppercased()
+        default:
+            return formatICUDatePattern(inner, date: date)
+        }
     }
 
     private static func formatICUDatePattern(_ pattern: String, date: Date) -> String {

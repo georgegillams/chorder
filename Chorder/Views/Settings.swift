@@ -143,7 +143,7 @@ private struct ChordEditorSheet: View {
     }
 
     private var tipText: String {
-        "Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\n\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, escape it with a backslash: \\|\n\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple's ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year."
+        "Put a | (pipe) character inside the chord output to place the cursor there after replacement is done.\n\nIf you want the output text to contain a | (pipe) instead of moving the cursor there, escape it with a backslash: \\|\n\nUse {{date}} placeholders for the current date/time, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}. Tokens follow Apple's ICU date patterns (e.g. d and dd for day of month, E for weekday; yyyy for calendar year). A lone {{YYYY}} is treated as calendar year.\n\nUse {{uuid}} or {{UUID}} for a random UUID (lowercase or uppercase)."
     }
 
     private var outputTipsButton: some View {
@@ -752,10 +752,13 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(SettingsSidebarItem.allCases, selection: $selectedSidebarItem) { item in
-                Label(item.title, systemImage: item.systemImage)
-                    .tag(item)
+            List(selection: $selectedSidebarItem) {
+                ForEach(SettingsSidebarItem.allCases) { item in
+                    Label(item.title, systemImage: item.systemImage)
+                        .tag(item)
+                }
             }
+            .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
         } detail: {
             Group {
@@ -779,6 +782,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(
             minWidth: 720,
             idealWidth: 960,
@@ -1039,6 +1043,10 @@ struct SettingsView: View {
                 settingsRowLabel(
                     title: "Date placeholders",
                     hint: "Use {{date}} tokens in output, for example {{yyyy}}, {{MM/dd/yyyy}}, or {{HH:mm}}."
+                )
+                settingsRowLabel(
+                    title: "UUID placeholders",
+                    hint: "Use {{uuid}} or {{UUID}} in output for a random UUID (lowercase or uppercase)."
                 )
                 settingsRowLabel(
                     title: "Bulk editing",
