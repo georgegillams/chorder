@@ -63,7 +63,7 @@ extension AppDelegate {
         if settingsWindow == nil {
             settingsWindow = NSWindow(
                 contentRect: NSRect(origin: .zero, size: Self.settingsWindowDefaultSize),
-                styleMask: [.closable, .titled, .resizable],
+                styleMask: [.closable, .titled, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
@@ -74,9 +74,7 @@ extension AppDelegate {
         }
 
         window.isReleasedWhenClosed = false
-        window.contentView?.wantsLayer = true
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .visible
+        window.styleMask.insert(.fullSizeContentView)
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
         window.contentMinSize = Self.settingsWindowMinimumSize
@@ -87,6 +85,13 @@ extension AppDelegate {
             hostingController.sizingOptions = [.minSize]
         }
         window.contentViewController = hostingController
+        // NavigationSplitView only lines the sidebar up with the title bar when the
+        // window content extends under it. Without this, macOS 27 draws a mismatched
+        // sidebar and can blank the list after the detail column changes.
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .visible
+        window.toolbarStyle = .unified
+        window.titlebarSeparatorStyle = .automatic
         window.setContentSize(Self.settingsWindowDefaultSize)
         window.center()
         window.makeKeyAndOrderFront(nil)

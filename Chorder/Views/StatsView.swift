@@ -81,6 +81,7 @@ struct StatsView: View {
             .frame(maxWidth: .infinity)
         }
         .background(statsBackground)
+        .navigationTitle("Stats")
     }
 
     private var statsBackground: some View {
@@ -93,7 +94,6 @@ struct StatsView: View {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .ignoresSafeArea()
     }
 
     private var header: some View {

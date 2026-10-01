@@ -752,10 +752,13 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(SettingsSidebarItem.allCases, selection: $selectedSidebarItem) { item in
-                Label(item.title, systemImage: item.systemImage)
-                    .tag(item)
+            List(selection: $selectedSidebarItem) {
+                ForEach(SettingsSidebarItem.allCases) { item in
+                    Label(item.title, systemImage: item.systemImage)
+                        .tag(item)
+                }
             }
+            .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
         } detail: {
             Group {
@@ -779,6 +782,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(
             minWidth: 720,
             idealWidth: 960,
